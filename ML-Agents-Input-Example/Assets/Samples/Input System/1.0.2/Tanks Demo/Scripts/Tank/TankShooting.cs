@@ -1,11 +1,11 @@
 using System;
-using Unity.MLAgents.Extensions.Runtime.Input;
+using Unity.MLAgents.Extensions.Input;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 
-public class TankShooting : MonoBehaviour, IIntputActionAssetProvider
+public class TankShooting : MonoBehaviour, IInputActionAssetProvider
 {
     public int m_PlayerNumber = 1;                  // Used to identify the different players.
     public Rigidbody m_Shell;                       // Prefab of the shell.
@@ -29,8 +29,6 @@ public class TankShooting : MonoBehaviour, IIntputActionAssetProvider
     void Awake()
     {
         m_InputActions = new TanksInputActions();
-        m_InputActions.Player.Fire.performed += FireOnperformed;
-        m_InputActions.Enable();
     }
 
     private void OnEnable()
@@ -38,14 +36,14 @@ public class TankShooting : MonoBehaviour, IIntputActionAssetProvider
         // When the tank is turned on, reset the launch force and the UI
         m_CurrentLaunchForce = m_MinLaunchForce;
         m_AimSlider.value = m_MinLaunchForce;
+        m_InputActions.Enable();
     }
 
-    void FireOnperformed(InputAction.CallbackContext obj)
+    void CheckFired(InputAction action)
     {
-        var val = obj.ReadValue<int>();
-        m_FireButtonPressedThisFrame = !m_FireButtonDown && val > 0;
-        m_FireButtonReleasedThisFrame = m_FireButtonDown && val < 1;
-        m_FireButtonDown = val > 0;
+        m_FireButtonPressedThisFrame = action.WasPressedThisFrame();
+        m_FireButtonReleasedThisFrame = action.WasReleasedThisFrame();
+        m_FireButtonDown = !action.WasPerformedThisFrame();
     }
 
     private void Start()
@@ -59,6 +57,7 @@ public class TankShooting : MonoBehaviour, IIntputActionAssetProvider
         // The slider should have a default value of the minimum launch force.
         m_AimSlider.value = m_MinLaunchForce;
 
+        CheckFired(m_InputActions.Player.Fire);
         // If the max force has been exceeded and the shell hasn't yet been launched...
         if (m_CurrentLaunchForce >= m_MaxLaunchForce && !m_Fired)
         {

@@ -4758,10 +4758,11 @@ GameObject:
   - component: {fileID: 4077479620493982843}
   - component: {fileID: 5750702714046439658}
   - component: {fileID: 2690620215108438311}
-  - component: {fileID: 8047192913502399256}
   - component: {fileID: 5092654722462045579}
   - component: {fileID: -8977268497864132443}
-  m_Layer: 9
+  - component: {fileID: 2617640673225564508}
+  - component: {fileID: 1731079284011088962}
+  m_Layer: 8
   m_Name: Tank
   m_TagString: tank
   m_Icon: {fileID: 0}
@@ -5143,33 +5144,6 @@ MonoBehaviour:
   m_UseChildSensors: 1
   m_UseChildActuators: 1
   m_ObservableAttributeHandling: 0
---- !u!114 &8047192913502399256
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2855894493477824887}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SensorName: RayPerceptionSensor
-  m_DetectableTags:
-  - tank
-  m_RaysPerDirection: 11
-  m_MaxRayDegrees: 169
-  m_SphereCastRadius: 0.31
-  m_RayLength: 596
-  m_RayLayerMask:
-    serializedVersion: 2
-    m_Bits: 3
-  m_ObservationStacks: 1
-  rayHitColor: {r: 1, g: 0, b: 0.15709352, a: 1}
-  rayMissColor: {r: 0.9811321, g: 0.9811321, b: 0.9811321, a: 1}
-  m_StartVerticalOffset: 1
-  m_EndVerticalOffset: 1
 --- !u!114 &5092654722462045579
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5200,7 +5174,56 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   DecisionPeriod: 5
-  TakeActionsBetweenDecisions: 0
+  TakeActionsBetweenDecisions: 1
+--- !u!114 &2617640673225564508
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2855894493477824887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 801669c0cdece6b40b2e741ad0b119ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Name: TankGrid
+  CellScaleX: 4
+  CellScaleZ: 4
+  GridNumSideX: 20
+  GridNumSideZ: 20
+  CellScaleY: 10
+  RotateToAgent: 1
+  ChannelDepth: 06000000
+  DetectableObjects:
+  - tank
+  - shell
+  ObserveMask:
+    serializedVersion: 2
+    m_Bits: 256
+  gridDepthType: 1
+  rootReference: {fileID: 2855894493477824887}
+  ObservationPerCell: 6
+  NumberOfObservations: 2400
+  ChannelOffsets: 00000000
+  DebugColors:
+  - {r: 1, g: 0.8690778, b: 0, a: 0}
+  - {r: 0, g: 0.35168457, b: 1, a: 0}
+  GizmoYOffset: 4.25
+  ShowGizmos: 1
+  CompressionType: 1
+--- !u!114 &1731079284011088962
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2855894493477824887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33005b124d7f841a191249baf2bacb2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2855894493477825447
 GameObject:
   m_ObjectHideFlags: 0

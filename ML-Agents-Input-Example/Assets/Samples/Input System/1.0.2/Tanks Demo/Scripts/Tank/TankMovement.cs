@@ -1,9 +1,9 @@
-using Unity.MLAgents.Extensions.Runtime.Input;
+using Unity.MLAgents.Extensions.Input;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
-public class TankMovement : MonoBehaviour, IIntputActionAssetProvider
+public class TankMovement : MonoBehaviour, IInputActionAssetProvider
 {
     public int m_PlayerNumber = 1;              // Used to identify which tank belongs to which player.  This is set by this tank's manager.
     public float m_Speed = 12f;                 // How fast the tank moves forward and back.

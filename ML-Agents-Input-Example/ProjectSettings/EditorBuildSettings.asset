@@ -12,5 +12,5 @@ EditorBuildSettings:
     path: Assets/Samples/Input System/1.0.2/Tanks Demo/Scenes/NewInput.unity
     guid: 37961ba4d27bd46428d20c2ffe403dc3
   m_configObjects:
-    com.unity.input.settings: {fileID: 11400000, guid: 778a63fac82734ee1b70a0b7c3e975c0,
+    com.unity.input.settings: {fileID: 11400000, guid: fe070b6f942ad418d965ebcea37bd28b,
       type: 2}

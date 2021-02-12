@@ -57,7 +57,7 @@ public partial class @TanksInputActions : IInputActionCollection2, IDisposable
                     ""id"": ""0faccb2c-e5c0-4722-97bf-f41bd00884ce"",
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
-                    ""interactions"": ""Press(behavior=2)""
+                    ""interactions"": """"
                 }
             ],
             ""bindings"": [
