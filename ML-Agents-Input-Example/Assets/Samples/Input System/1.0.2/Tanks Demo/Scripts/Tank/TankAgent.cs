@@ -56,10 +56,12 @@ public class TankAgent : Agent
         sensor.AddObservation(transform.localRotation.normalized.y);
         var opponentPos = m_Opponent.FireTransform.position;
         var position = FireTransform.position;
+        var velocity = transform.InverseTransformDirection(m_Rb.velocity);
         // charge time
         sensor.AddObservation(m_Shooting.m_CurrentLaunchForce / m_Shooting.maxLaunchForce);
-        sensor.AddObservation(m_Rb.velocity.normalized);
         sensor.AddObservation(m_Th.currentHealth / m_Th.startingHealth);
+        sensor.AddObservation(velocity.x);
+        sensor.AddObservation(velocity.z);
         sensor.AddObservation(Vector3.Dot((position - opponentPos).normalized, FireTransform.forward));
         sensor.AddObservation(Vector3.Distance(position, opponentPos) / k_AreaSize);
     }
