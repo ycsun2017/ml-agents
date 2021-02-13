@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Samples/Input System/1.0.2/Tanks Demo/Scenes/ButtonRemapScreen.unity
     guid: 6d897b03f2c393542b51d405e97f9f92
   - enabled: 1

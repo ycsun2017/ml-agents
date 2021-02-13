@@ -7,18 +7,18 @@ public class ButtonRemapScreenController : MonoBehaviour
 {
     public Button okButton;
     public InputActionAsset tanksInputActions;
-    private InputActionMap playerActionMap;
+    InputActionMap m_PlayerActionMap;
 
     void Start()
     {
-        playerActionMap = tanksInputActions.FindActionMap("Player");
-        playerActionMap.Disable();
+        m_PlayerActionMap = tanksInputActions.FindActionMap("Player");
+        m_PlayerActionMap.Disable();
         okButton.onClick.AddListener(OkButtonClicked);
     }
 
-    private void OkButtonClicked()
+    void OkButtonClicked()
     {
-        playerActionMap.Enable();
+        m_PlayerActionMap.Enable();
         SceneManager.LoadScene("NewInput");
     }
 }

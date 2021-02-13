@@ -1,75 +1,90 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 
 public class GameManager : MonoBehaviour
 {
-    public int m_NumRoundsToWin = 5;            // The number of rounds a single player has to win to win the game.
-    public float m_StartDelay = 3f;             // The delay between the start of RoundStarting and RoundPlaying phases.
-    public float m_EndDelay = 3f;               // The delay between the end of RoundPlaying and RoundEnding phases.
-    public CameraControl m_CameraControl;       // Reference to the CameraControl script for control during different phases.
-    public Text m_MessageText;                  // Reference to the overlay Text to display winning text, etc.
-    public GameObject m_TankPrefab;             // Reference to the prefab the players will control.
-    public TankManager[] m_Tanks;               // A collection of managers for enabling and disabling different aspects of the tanks.
+    [FormerlySerializedAs("m_NumRoundsToWin")]
+    public int numRoundsToWin = 5;            // The number of rounds a single player has to win to win the game.
+    [FormerlySerializedAs("m_StartDelay")]
+    public float startDelay = 3f;             // The delay between the start of RoundStarting and RoundPlaying phases.
+    [FormerlySerializedAs("m_EndDelay")]
+    public float endDelay = 3f;               // The delay between the end of RoundPlaying and RoundEnding phases.
+    [FormerlySerializedAs("m_CameraControl")]
+    public CameraControl cameraControl;       // Reference to the CameraControl script for control during different phases.
+    [FormerlySerializedAs("m_MessageText")]
+    public Text messageText;                  // Reference to the overlay Text to display winning text, etc.
+    [FormerlySerializedAs("m_TankPrefab")]
+    public GameObject tankPrefab;             // Reference to the prefab the players will control.
+    [FormerlySerializedAs("m_Tanks")]
+    public TankManager[] tanks;               // A collection of managers for enabling and disabling different aspects of the tanks.
 
+    int m_RoundNumber;                  // Which round the game is currently on.
+    WaitForSeconds m_StartWait;         // Used to have a delay whilst the round starts.
+    WaitForSeconds m_EndWait;           // Used to have a delay whilst the round or game ends.
+    TankManager m_RoundWinner;          // Reference to the winner of the current round.  Used to make an announcement of who won.
+    TankManager m_GameWinner;           // Reference to the winner of the game.  Used to make an announcement of who won.
 
-    private int m_RoundNumber;                  // Which round the game is currently on.
-    private WaitForSeconds m_StartWait;         // Used to have a delay whilst the round starts.
-    private WaitForSeconds m_EndWait;           // Used to have a delay whilst the round or game ends.
-    private TankManager m_RoundWinner;          // Reference to the winner of the current round.  Used to make an announcement of who won.
-    private TankManager m_GameWinner;           // Reference to the winner of the game.  Used to make an announcement of who won.
+    void Awake()
+    {
+        SpawnAllTanks();
+    }
 
-
-    private void Start()
+    void Start()
     {
         // Create the delays so they only have to be made once.
-        m_StartWait = new WaitForSeconds(m_StartDelay);
-        m_EndWait = new WaitForSeconds(m_EndDelay);
+        m_StartWait = new WaitForSeconds(startDelay);
+        m_EndWait = new WaitForSeconds(endDelay);
 
-        SpawnAllTanks();
         SetCameraTargets();
+        // assume there are 2 tanks
+        for (var i = 1; i < tanks.Length; i += 2)
+        {
+            tanks[i - 1].SetOpponent(tanks[i].instance);
+            tanks[i].SetOpponent(tanks[i - 1].instance);
+
+        }
 
         // Once the tanks have been created and the camera is using them as targets, start the game.
         StartCoroutine(GameLoop());
     }
 
-    private void SpawnAllTanks()
+    void SpawnAllTanks()
     {
         // For all the tanks...
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
             // ... create them, set their player number and references needed for control.
-            m_Tanks[i].m_Instance =
-                Instantiate(m_TankPrefab, m_Tanks[i].m_SpawnPoint.position, m_Tanks[i].m_SpawnPoint.rotation) as GameObject;
-            m_Tanks[i].m_PlayerNumber = i + 1;
-            m_Tanks[i].Setup();
+            tanks[i].instance =
+                Instantiate(tankPrefab, tanks[i].spawnPoint.position, tanks[i].spawnPoint.rotation) as GameObject;
+            tanks[i].playerNumber = i + 1;
+            tanks[i].Setup();
         }
 
-        // assume there are 2 tanks
-        m_Tanks[0].SetOpponent(m_Tanks[1].m_Instance);
-        m_Tanks[1].SetOpponent(m_Tanks[0].m_Instance);
     }
 
-    private void SetCameraTargets()
+    void SetCameraTargets()
     {
         // Create a collection of transforms the same size as the number of tanks.
-        Transform[] targets = new Transform[m_Tanks.Length];
+        Transform[] targets = new Transform[tanks.Length];
 
         // For each of these transforms...
         for (int i = 0; i < targets.Length; i++)
         {
             // ... set it to the appropriate tank transform.
-            targets[i] = m_Tanks[i].m_Instance.transform;
+            targets[i] = tanks[i].instance.transform;
         }
 
         // These are the targets the camera should follow.
-        m_CameraControl.m_Targets = targets;
+        cameraControl.targets = targets;
     }
 
     // This is called from start and will run each phase of the game one after another.
-    private IEnumerator GameLoop()
+    IEnumerator GameLoop()
     {
         // Start off by running the 'RoundStarting' coroutine but don't return until it's finished.
         yield return StartCoroutine(RoundStarting());
@@ -94,30 +109,30 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private IEnumerator RoundStarting()
+    IEnumerator RoundStarting()
     {
         // As soon as the round starts reset the tanks and make sure they can't move.
         ResetAllTanks();
         DisableTankControl();
 
         // Snap the camera's zoom and position to something appropriate for the reset tanks.
-        m_CameraControl.SetStartPositionAndSize();
+        cameraControl.SetStartPositionAndSize();
 
         // Increment the round number and display text showing the players what round it is.
         m_RoundNumber++;
-        m_MessageText.text = "ROUND " + m_RoundNumber;
+        messageText.text = "ROUND " + m_RoundNumber;
 
         // Wait for the specified length of time until yielding control back to the game loop.
         yield return m_StartWait;
     }
 
-    private IEnumerator RoundPlaying()
+    IEnumerator RoundPlaying()
     {
         // As soon as the round begins playing let the players control the tanks.
         EnableTankControl();
 
         // Clear the text from the screen.
-        m_MessageText.text = string.Empty;
+        messageText.text = string.Empty;
 
         // While there is not one tank left...
         while (!OneTankLeft())
@@ -127,7 +142,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private IEnumerator RoundEnding()
+    IEnumerator RoundEnding()
     {
         // Stop tanks from moving.
         DisableTankControl();
@@ -140,30 +155,30 @@ public class GameManager : MonoBehaviour
 
         // If there is a winner, increment their score.
         if (m_RoundWinner != null)
-            m_RoundWinner.m_Wins++;
+            m_RoundWinner.wins++;
 
         // Now the winner's score has been incremented, see if someone has one the game.
         m_GameWinner = GetGameWinner();
 
         // Get a message based on the scores and whether or not there is a game winner and display it.
         string message = EndMessage();
-        m_MessageText.text = message;
+        messageText.text = message;
 
         // Wait for the specified length of time until yielding control back to the game loop.
         yield return m_EndWait;
     }
 
     // This is used to check if there is one or fewer tanks remaining and thus the round should end.
-    private bool OneTankLeft()
+    bool OneTankLeft()
     {
         // Start the count of tanks left at zero.
         int numTanksLeft = 0;
 
         // Go through all the tanks...
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
             // ... and if they are active, increment the counter.
-            if (m_Tanks[i].m_Instance.activeSelf)
+            if (tanks[i].instance.activeSelf)
                 numTanksLeft++;
         }
 
@@ -173,14 +188,14 @@ public class GameManager : MonoBehaviour
 
     // This function is to find out if there is a winner of the round.
     // This function is called with the assumption that 1 or fewer tanks are currently active.
-    private TankManager GetRoundWinner()
+    TankManager GetRoundWinner()
     {
         // Go through all the tanks...
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
             // ... and if one of them is active, it is the winner so return it.
-            if (m_Tanks[i].m_Instance.activeSelf)
-                return m_Tanks[i];
+            if (tanks[i].instance.activeSelf)
+                return tanks[i];
         }
 
         // If none of the tanks are active it is a draw so return null.
@@ -188,14 +203,14 @@ public class GameManager : MonoBehaviour
     }
 
     // This function is to find out if there is a winner of the game.
-    private TankManager GetGameWinner()
+    TankManager GetGameWinner()
     {
         // Go through all the tanks...
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
             // ... and if one of them has enough rounds to win the game, return it.
-            if (m_Tanks[i].m_Wins == m_NumRoundsToWin)
-                return m_Tanks[i];
+            if (tanks[i].wins == numRoundsToWin)
+                return tanks[i];
         }
 
         // If no tanks have enough rounds to win, return null.
@@ -203,53 +218,53 @@ public class GameManager : MonoBehaviour
     }
 
     // Returns a string message to display at the end of each round.
-    private string EndMessage()
+    string EndMessage()
     {
         // By default when a round ends there are no winners so the default end message is a draw.
         string message = "DRAW!";
 
         // If there is a winner then change the message to reflect that.
         if (m_RoundWinner != null)
-            message = m_RoundWinner.m_ColoredPlayerText + " WINS THE ROUND!";
+            message = m_RoundWinner.coloredPlayerText + " WINS THE ROUND!";
 
         // Add some line breaks after the initial message.
         message += "\n\n\n\n";
 
         // Go through all the tanks and add each of their scores to the message.
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
-            message += m_Tanks[i].m_ColoredPlayerText + ": " + m_Tanks[i].m_Wins + " WINS\n";
+            message += tanks[i].coloredPlayerText + ": " + tanks[i].wins + " WINS\n";
         }
 
         // If there is a game winner, change the entire message to reflect that.
         if (m_GameWinner != null)
-            message = m_GameWinner.m_ColoredPlayerText + " WINS THE GAME!";
+            message = m_GameWinner.coloredPlayerText + " WINS THE GAME!";
 
         return message;
     }
 
     // This function is used to turn all the tanks back on and reset their positions and properties.
-    private void ResetAllTanks()
+    void ResetAllTanks()
     {
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
-            m_Tanks[i].Reset();
+            tanks[i].Reset();
         }
     }
 
-    private void EnableTankControl()
+    void EnableTankControl()
     {
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
-            m_Tanks[i].EnableControl();
+            tanks[i].EnableControl();
         }
     }
 
-    private void DisableTankControl()
+    void DisableTankControl()
     {
-        for (int i = 0; i < m_Tanks.Length; i++)
+        for (int i = 0; i < tanks.Length; i++)
         {
-            m_Tanks[i].DisableControl();
+            tanks[i].DisableControl();
         }
     }
 }

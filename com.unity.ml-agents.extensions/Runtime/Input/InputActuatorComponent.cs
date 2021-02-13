@@ -283,10 +283,17 @@ namespace Unity.MLAgents.Extensions.Input
                 // }
                 // else
                 // {
+<<<<<<< HEAD
                 action.AddBinding(path,
                     action.interactions,
                     action.processors,
                     mlAgentsControlSchemeName + localId);
+=======
+                    action.AddBinding(path,
+                        action.interactions,
+                        action.processors,
+                        mlAgentsControlSchemeName+localId);
+>>>>>>> update to tanks.
                 // }
 
                 var adaptor = (IRLActionInputAdaptor)Activator.CreateInstance(
@@ -335,6 +342,8 @@ namespace Unity.MLAgents.Extensions.Input
             }
         }
 
+
+
         internal void CleanupActionAsset()
         {
             InputSystem.RemoveLayout(mlAgentsLayoutName);
@@ -352,7 +361,8 @@ namespace Unity.MLAgents.Extensions.Input
             if (m_Actuators != null)
             {
                 Array.Clear(m_Actuators, 0, m_Actuators.Length);
-            }
+                && m_InputAsset.FindControlSchemeIndex(mlAgentsControlSchemeName+m_LocalId) != -1)
+            {
             m_InputAsset = null;
             m_PlayerInput = null;
             m_BehaviorParameters = null;

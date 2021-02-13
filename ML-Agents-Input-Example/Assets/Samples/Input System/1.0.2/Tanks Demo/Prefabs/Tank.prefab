@@ -4761,7 +4761,6 @@ GameObject:
   - component: {fileID: 5092654722462045579}
   - component: {fileID: -8977268497864132443}
   - component: {fileID: 2617640673225564508}
-  - component: {fileID: 1731079284011088962}
   m_Layer: 8
   m_Name: Tank
   m_TagString: tank
@@ -4824,7 +4823,7 @@ AudioSource:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2855894493477824887}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 24378114, guid: 86a7353f2579d476fbaa7f161c2e5d00,
     type: 2}
@@ -4921,7 +4920,7 @@ AudioSource:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2855894493477824887}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 24304612, guid: 86a7353f2579d476fbaa7f161c2e5d00,
     type: 2}
@@ -5023,13 +5022,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6e4cc0827b572b5408b2cd8eb8b456b4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_PlayerNumber: 1
-  m_Speed: 12
-  m_TurnSpeed: 180
-  m_MovementAudio: {fileID: 2855894493478110205}
-  m_EngineIdling: {fileID: 8300000, guid: 4932ab25b84dd7649b80af68a9660ddc, type: 3}
-  m_EngineDriving: {fileID: 8300000, guid: d7ca9fb5aa30155449192b23d7fb3336, type: 3}
-  m_PitchRange: 0.1
+  playerNumber: 1
+  speed: 12
+  turnSpeed: 180
+  movementAudio: {fileID: 2855894493478110205}
+  engineIdling: {fileID: 8300000, guid: 4932ab25b84dd7649b80af68a9660ddc, type: 3}
+  engineDriving: {fileID: 8300000, guid: d7ca9fb5aa30155449192b23d7fb3336, type: 3}
+  pitchRange: 0.1
 --- !u!114 &2855894493466581815
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5042,12 +5041,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 030896d0325fa3e4d8d7d4cfe2351cb2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_StartingHealth: 100
-  m_Slider: {fileID: 2855894493466524331}
-  m_FillImage: {fileID: 2855894493466576951}
-  m_FullHealthColor: {r: 0, g: 1, b: 0, a: 1}
-  m_ZeroHealthColor: {r: 1, g: 0, b: 0, a: 1}
-  m_ExplosionPrefab: {fileID: 151086, guid: 6bc6d0dd8b8428e4ca316513f2cf13c6, type: 3}
+  startingHealth: 100
+  slider: {fileID: 2855894493466524331}
+  fillImage: {fileID: 2855894493466576951}
+  fullHealthColor: {r: 0, g: 1, b: 0, a: 1}
+  zeroHealthColor: {r: 1, g: 0, b: 0, a: 1}
+  explosionPrefab: {fileID: 151086, guid: 6bc6d0dd8b8428e4ca316513f2cf13c6, type: 3}
   isDead: 0
 --- !u!114 &2855894493466493635
 MonoBehaviour:
@@ -5061,16 +5060,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 184d72ea2424d1443bca885930fe844a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_PlayerNumber: 1
-  m_Shell: {fileID: 5409530, guid: 008ecb1b70bec724fa2cd34255b0d8f8, type: 3}
-  m_FireTransform: {fileID: 2855894493477563013}
-  m_AimSlider: {fileID: 2855894493466582757}
-  m_ShootingAudio: {fileID: 2855894493478119281}
-  m_ChargingClip: {fileID: 8300000, guid: c17f124fcdc0f5446a72f793898bd74b, type: 3}
-  m_FireClip: {fileID: 8300000, guid: 672a9941361ad494a99fba36759eca80, type: 3}
-  m_MinLaunchForce: 15
-  m_MaxLaunchForce: 30
-  m_MaxChargeTime: 0.75
+  playerNumber: 1
+  shell: {fileID: 5409530, guid: 008ecb1b70bec724fa2cd34255b0d8f8, type: 3}
+  fireTransform: {fileID: 2855894493477563013}
+  aimSlider: {fileID: 2855894493466582757}
+  shootingAudio: {fileID: 2855894493478119281}
+  chargingClip: {fileID: 8300000, guid: c17f124fcdc0f5446a72f793898bd74b, type: 3}
+  fireClip: {fileID: 8300000, guid: 672a9941361ad494a99fba36759eca80, type: 3}
+  minLaunchForce: 15
+  maxLaunchForce: 30
+  maxChargeTime: 0.75
 --- !u!114 &4077479620493982843
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5096,8 +5095,44 @@ MonoBehaviour:
   m_ControlsChangedEvent:
     m_PersistentCalls:
       m_Calls: []
-  m_ActionEvents: []
-  m_NeverAutoSwitchControlSchemes: 0
+  m_ActionEvents:
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: fa57f103-ab70-42f4-8eae-810795ccd5e1
+    m_ActionName: Player/Gas
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: b7baef12-09f9-4ee9-ac23-9543eb6eead3
+    m_ActionName: Player/Brake
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: cdfa0440-2012-4dea-a37a-db07b0d31f6a
+    m_ActionName: Player/Turret
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: 0faccb2c-e5c0-4722-97bf-f41bd00884ce
+    m_ActionName: Player/Fire
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: 21a0d5eb-b5b8-44c0-840c-0d92504df067
+    m_ActionName: UI/Navigate
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: ce1414e8-72a9-4869-bdd5-799643821223
+    m_ActionName: UI/Submit
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: ab41bb40-603b-44fe-82a0-4c534e19e603
+    m_ActionName: UI/Cancel
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: 5d906fbb-d21c-45c0-885c-0ce8b33c67bf
+    m_ActionName: UI/Point[/Mouse/position]
+  - m_PersistentCalls:
+      m_Calls: []
+    m_ActionId: 9822b927-f006-4158-a954-6a7921d46d87
+    m_ActionName: UI/Click[/Mouse/leftButton]
+  m_NeverAutoSwitchControlSchemes: 1
   m_DefaultControlScheme: 
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
@@ -5127,7 +5162,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 9
+    VectorObservationSize: 8
     NumStackedVectorObservations: 3
     m_ActionSpec:
       m_NumContinuousActions: 0
@@ -5159,7 +5194,7 @@ MonoBehaviour:
   agentParameters:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
-  MaxStep: 5000
+  MaxStep: 0
   FireTransform: {fileID: 2855894493477563013}
 --- !u!114 &-8977268497864132443
 MonoBehaviour:
@@ -5173,8 +5208,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DecisionPeriod: 5
-  TakeActionsBetweenDecisions: 1
+  DecisionPeriod: 3
+  TakeActionsBetweenDecisions: 0
 --- !u!114 &2617640673225564508
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5188,42 +5223,32 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Name: TankGrid
-  CellScaleX: 4
-  CellScaleZ: 4
-  GridNumSideX: 20
-  GridNumSideZ: 20
+  CellScaleX: 3
+  CellScaleZ: 3
+  GridNumSideX: 40
+  GridNumSideZ: 40
   CellScaleY: 10
-  RotateToAgent: 1
-  ChannelDepth: 06000000
+  RotateToAgent: 0
+  ChannelDepth: 030000000300000003000000
   DetectableObjects:
   - tank
   - shell
+  - terrain
   ObserveMask:
     serializedVersion: 2
-    m_Bits: 256
+    m_Bits: 768
   gridDepthType: 1
   rootReference: {fileID: 2855894493477824887}
-  ObservationPerCell: 6
-  NumberOfObservations: 2400
-  ChannelOffsets: 00000000
+  ObservationPerCell: 9
+  NumberOfObservations: 14400
+  ChannelOffsets: 000000000300000006000000
   DebugColors:
   - {r: 1, g: 0.8690778, b: 0, a: 0}
   - {r: 0, g: 0.35168457, b: 1, a: 0}
-  GizmoYOffset: 4.25
+  - {r: 1, g: 0.22373962, b: 0, a: 0}
+  GizmoYOffset: 0.5
   ShowGizmos: 1
   CompressionType: 1
---- !u!114 &1731079284011088962
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2855894493477824887}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 33005b124d7f841a191249baf2bacb2a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &2855894493477825447
 GameObject:
   m_ObjectHideFlags: 0
@@ -5772,7 +5797,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aeac210ca39225b458bb07429e573f2d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UseRelativeRotation: 1
+  useRelativeRotation: 1
 --- !u!1 &2855894493477860423
 GameObject:
   m_ObjectHideFlags: 0

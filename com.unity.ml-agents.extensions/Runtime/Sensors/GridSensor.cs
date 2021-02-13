@@ -397,7 +397,7 @@ namespace Unity.MLAgents.Extensions.Sensors
         /// Calls the initialization methods. Creates the data storing properties used to send the data
         /// Establishes
         /// </summary>
-        public virtual void Start()
+        public virtual void OnEnable()
         {
             InitGridParameters();
             InitDepthType();
@@ -518,6 +518,9 @@ namespace Unity.MLAgents.Extensions.Sensors
         /// <param name="numChannelsToAdd"></param>
         protected void ChannelsToTexture(int channelIndex, int numChannelsToAdd)
         {
+
+            if (ReferenceEquals(m_perceptionTexture2D, null))
+                return;
             for (int i = 0; i < NumCells; i++)
             {
                 for (int j = 0; j < numChannelsToAdd; j++)
@@ -819,7 +822,7 @@ namespace Unity.MLAgents.Extensions.Sensors
             if (ShowGizmos)
             {
                 if (Application.isEditor && !Application.isPlaying)
-                    Start();
+                    OnEnable();
 
                 Perceive();
 

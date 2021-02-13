@@ -808,7 +808,7 @@ GameObject:
   - component: {fileID: 13773590}
   m_Layer: 0
   m_Name: Pumpjack
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -1395,7 +1395,7 @@ GameObject:
   - component: {fileID: 2330888}
   m_Layer: 0
   m_Name: PalmTree
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -1911,7 +1911,7 @@ GameObject:
   - component: {fileID: 2348470}
   m_Layer: 0
   m_Name: PalmTree (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -2088,7 +2088,7 @@ GameObject:
   - component: {fileID: 6572526}
   m_Layer: 0
   m_Name: Building01 (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -2608,7 +2608,7 @@ GameObject:
   - component: {fileID: 6535744}
   m_Layer: 0
   m_Name: Building01 (3)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -2812,7 +2812,7 @@ GameObject:
   - component: {fileID: 6505900}
   m_Layer: 0
   m_Name: Rocks03 (5)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -2919,7 +2919,7 @@ GameObject:
   - component: {fileID: 13624690}
   m_Layer: 0
   m_Name: Rocks02 (4)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -3432,7 +3432,7 @@ GameObject:
   - component: {fileID: 6517152}
   m_Layer: 0
   m_Name: Column02 (3)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -3565,7 +3565,7 @@ GameObject:
   - component: {fileID: 6556062}
   m_Layer: 0
   m_Name: Rocks01 (4)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -3780,7 +3780,7 @@ GameObject:
   - component: {fileID: 6529174}
   m_Layer: 0
   m_Name: Building02
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -4101,7 +4101,7 @@ GameObject:
   - component: {fileID: 6552652}
   m_Layer: 0
   m_Name: Ruins01 (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -4420,7 +4420,7 @@ GameObject:
   - component: {fileID: 6527172}
   m_Layer: 0
   m_Name: Rocks02 (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -4637,7 +4637,7 @@ GameObject:
   - component: {fileID: 6564758}
   m_Layer: 0
   m_Name: Column02 (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -5146,7 +5146,7 @@ GameObject:
   - component: {fileID: 6513952}
   m_Layer: 0
   m_Name: Building02 (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -5277,7 +5277,7 @@ GameObject:
   - component: {fileID: 13641714}
   m_Layer: 0
   m_Name: PalmTree (9)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -5374,7 +5374,7 @@ GameObject:
   - component: {fileID: 6524904}
   m_Layer: 0
   m_Name: Building02 (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -5506,7 +5506,7 @@ GameObject:
   - component: {fileID: 6521870}
   m_Layer: 0
   m_Name: Column02
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -5822,7 +5822,7 @@ GameObject:
   - component: {fileID: 6548018}
   m_Layer: 0
   m_Name: Building01
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -6796,7 +6796,7 @@ GameObject:
   - component: {fileID: 6505308}
   m_Layer: 0
   m_Name: Rocks02
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -7168,7 +7168,7 @@ GameObject:
   - component: {fileID: 13671336}
   m_Layer: 0
   m_Name: Tree (5)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -8218,7 +8218,7 @@ GameObject:
   - component: {fileID: 13685526}
   m_Layer: 0
   m_Name: Column01 (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -8598,7 +8598,7 @@ GameObject:
   - component: {fileID: 13638260}
   m_Layer: 0
   m_Name: OilStorage (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -8862,7 +8862,7 @@ GameObject:
   - component: {fileID: 6545974}
   m_Layer: 0
   m_Name: Helipad
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -9048,7 +9048,7 @@ GameObject:
   - component: {fileID: 13782984}
   m_Layer: 0
   m_Name: Pumpjack
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -9287,7 +9287,7 @@ GameObject:
   - component: {fileID: 6549066}
   m_Layer: 0
   m_Name: Refinery
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -9472,7 +9472,7 @@ GameObject:
   - component: {fileID: 13728424}
   m_Layer: 0
   m_Name: Pumpjack
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -9717,7 +9717,7 @@ GameObject:
   - component: {fileID: 13615480}
   m_Layer: 0
   m_Name: Column01 (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -9832,7 +9832,7 @@ GameObject:
   - component: {fileID: 13655406}
   m_Layer: 0
   m_Name: OilStorage
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -10220,7 +10220,7 @@ GameObject:
   - component: {fileID: 6535416}
   m_Layer: 0
   m_Name: BustedTank
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -10434,7 +10434,7 @@ GameObject:
   - component: {fileID: 13690214}
   m_Layer: 0
   m_Name: Tree (8)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -10940,7 +10940,7 @@ GameObject:
   - component: {fileID: 6546124}
   m_Layer: 0
   m_Name: Building01 (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -11521,7 +11521,7 @@ GameObject:
   - component: {fileID: 13645844}
   m_Layer: 0
   m_Name: Radar
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295

@@ -517,6 +517,8 @@ namespace Unity.MLAgents
             }
             m_Brain?.Dispose();
             m_Initialized = false;
+            m_ActuatorManager.ResetData();
+            m_ActuatorManager = null;
         }
 
         void NotifyAgentDone(DoneReason doneReason)
@@ -997,10 +999,10 @@ namespace Unity.MLAgents
             // Support legacy OnActionReceived
             // TODO don't set this up if the sizes are 0?
             var param = m_PolicyFactory.BrainParameters;
-            m_VectorActuator = new VectorActuator(this, this, param.ActionSpec);
+            m_VectorActuator = m_VectorActuator ?? new VectorActuator(this, this, param.ActionSpec);
             m_ActuatorManager = new ActuatorManager(attachedActuators.Length + 1);
-            m_LegacyActionCache = new float[m_VectorActuator.TotalNumberOfActions()];
-            m_LegacyHeuristicCache = new float[m_VectorActuator.TotalNumberOfActions()];
+            m_LegacyActionCache = m_LegacyActionCache ?? new float[m_VectorActuator.TotalNumberOfActions()];
+            m_LegacyHeuristicCache = m_LegacyHeuristicCache ?? new float[m_VectorActuator.TotalNumberOfActions()];
 
             m_ActuatorManager.Add(m_VectorActuator);
 

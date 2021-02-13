@@ -5,56 +5,63 @@ using UnityEngine.InputSystem.LowLevel;
 using System.Linq;
 using System;
 using UnityEngine.InputSystem.Controls;
+using UnityEngine.Serialization;
 
 public class ControlRebindingUI : MonoBehaviour
 {
-    public Button m_Button;
-    public Text m_Text;
-    public InputActionReference m_ActionReference;
-    public int m_DefaultBindingIndex;
-    public Button[] m_CompositeButtons;
-    public Text[] m_CompositeTexts;
+    [FormerlySerializedAs("m_Button")]
+    public Button button;
+    [FormerlySerializedAs("m_Text")]
+    public Text text;
+    [FormerlySerializedAs("m_ActionReference")]
+    public InputActionReference actionReference;
+    [FormerlySerializedAs("m_DefaultBindingIndex")]
+    public int defaultBindingIndex;
+    [FormerlySerializedAs("m_CompositeButtons")]
+    public Button[] compositeButtons;
+    [FormerlySerializedAs("m_CompositeTexts")]
+    public Text[] compositeTexts;
 
-    private InputAction m_Action;
-    private InputActionRebindingExtensions.RebindingOperation m_RebindOperation;
-    private int[] m_CompositeBindingIndices;
-    private string m_CompositeType;
-    private bool m_IsUsingComposite;
+    InputAction m_Action;
+    InputActionRebindingExtensions.RebindingOperation m_RebindOperation;
+    int[] m_CompositeBindingIndices;
+    string m_CompositeType;
+    bool m_IsUsingComposite;
 
     public void Start()
     {
-        m_Action = m_ActionReference.action;
-        if (m_Button == null)
-            m_Button = GetComponentInChildren<Button>();
-        if (m_Text == null)
-            m_Text = m_Button.GetComponentInChildren<Text>();
+        m_Action = actionReference.action;
+        if (button == null)
+            button = GetComponentInChildren<Button>();
+        if (text == null)
+            text = button.GetComponentInChildren<Text>();
 
-        m_Button.onClick.AddListener(delegate { RemapButtonClicked(name, m_DefaultBindingIndex); });
-        if (m_CompositeButtons != null && m_CompositeButtons.Length > 0)
+        button.onClick.AddListener(delegate { RemapButtonClicked(name, defaultBindingIndex); });
+        if (compositeButtons != null && compositeButtons.Length > 0)
         {
-            if (m_CompositeTexts == null || m_CompositeTexts.Length != m_CompositeButtons.Length)
-                m_CompositeTexts = new Text[m_CompositeButtons.Length];
+            if (compositeTexts == null || compositeTexts.Length != compositeButtons.Length)
+                compositeTexts = new Text[compositeButtons.Length];
             m_CompositeBindingIndices = Enumerable.Range(0, m_Action.bindings.Count)
                 .Where(x => m_Action.bindings[x].isPartOfComposite).ToArray();
             var compositeBinding = m_Action.bindings.First(x => x.isComposite);
             m_CompositeType = compositeBinding.name;
-            for (int i = 0; i < m_CompositeButtons.Length && i < m_CompositeBindingIndices.Length; i++)
+            for (int i = 0; i < compositeButtons.Length && i < m_CompositeBindingIndices.Length; i++)
             {
                 int compositeBindingIndex = m_CompositeBindingIndices[i];
-                m_CompositeButtons[i].onClick.AddListener(delegate { RemapButtonClicked(name, compositeBindingIndex); });
-                if (m_CompositeTexts[i] == null)
-                    m_CompositeTexts[i] = m_CompositeButtons[i].GetComponentInChildren<Text>();
+                compositeButtons[i].onClick.AddListener(delegate { RemapButtonClicked(name, compositeBindingIndex); });
+                if (compositeTexts[i] == null)
+                    compositeTexts[i] = compositeButtons[i].GetComponentInChildren<Text>();
             }
         }
         ResetButtonMappingTextValue();
     }
 
-    private void OnDestroy()
+    void OnDestroy()
     {
         m_RebindOperation?.Dispose();
     }
 
-    private bool ControlMatchesCompositeType(InputControl control, string compositeType)
+    bool ControlMatchesCompositeType(InputControl control, string compositeType)
     {
         if (compositeType == null)
             return true;
@@ -68,7 +75,7 @@ public class ControlRebindingUI : MonoBehaviour
         throw new ArgumentException($"{compositeType} is not a known composite type", nameof(compositeType));
     }
 
-    private unsafe float ScoreFunc(string compositeType, InputControl control, InputEventPtr eventPtr)
+    unsafe float ScoreFunc(string compositeType, InputControl control, InputEventPtr eventPtr)
     {
         var statePtr = control.GetStatePtrFromStateEvent(eventPtr);
         var magnitude = control.EvaluateMagnitude(statePtr);
@@ -87,8 +94,8 @@ public class ControlRebindingUI : MonoBehaviour
 
     void RemapButtonClicked(string name, int bindingIndex = 0)
     {
-        m_Button.enabled = false;
-        m_Text.text = "Press button/stick for " + name;
+        button.enabled = false;
+        text.text = "Press button/stick for " + name;
         m_RebindOperation?.Dispose();
         m_RebindOperation = m_Action.PerformInteractiveRebinding()
             .WithControlsExcluding("<Mouse>/position")
@@ -111,14 +118,14 @@ public class ControlRebindingUI : MonoBehaviour
                 {
                     if (m_IsUsingComposite)
                     {
-                        m_Action.ApplyBindingOverride(m_DefaultBindingIndex, "");
+                        m_Action.ApplyBindingOverride(defaultBindingIndex, "");
                         m_Action.ApplyBindingOverride(
-                            bindingIndex != m_DefaultBindingIndex ? bindingIndex : m_CompositeBindingIndices[0],
+                            bindingIndex != defaultBindingIndex ? bindingIndex : m_CompositeBindingIndices[0],
                             path);
                     }
                     else
                     {
-                        m_Action.ApplyBindingOverride(m_DefaultBindingIndex, path);
+                        m_Action.ApplyBindingOverride(defaultBindingIndex, path);
                         foreach (var i in m_CompositeBindingIndices)
                             m_Action.ApplyBindingOverride(i, "");
                     }
@@ -129,13 +136,13 @@ public class ControlRebindingUI : MonoBehaviour
 
     void ResetButtonMappingTextValue()
     {
-        m_Text.text = InputControlPath.ToHumanReadableString(m_Action.bindings[0].effectivePath);
-        m_Button.gameObject.SetActive(!m_IsUsingComposite);
-        if (m_CompositeTexts != null)
-            for (int i = 0; i < m_CompositeTexts.Length; i++)
+        text.text = InputControlPath.ToHumanReadableString(m_Action.bindings[0].effectivePath);
+        button.gameObject.SetActive(!m_IsUsingComposite);
+        if (compositeTexts != null)
+            for (int i = 0; i < compositeTexts.Length; i++)
             {
-                m_CompositeTexts[i].text = InputControlPath.ToHumanReadableString(m_Action.bindings[m_CompositeBindingIndices[i]].effectivePath);
-                m_CompositeButtons[i].gameObject.SetActive(m_IsUsingComposite);
+                compositeTexts[i].text = InputControlPath.ToHumanReadableString(m_Action.bindings[m_CompositeBindingIndices[i]].effectivePath);
+                compositeButtons[i].gameObject.SetActive(m_IsUsingComposite);
             }
     }
 
@@ -144,6 +151,6 @@ public class ControlRebindingUI : MonoBehaviour
         m_RebindOperation.Dispose();
         m_RebindOperation = null;
         ResetButtonMappingTextValue();
-        m_Button.enabled = true;
+        button.enabled = true;
     }
 }

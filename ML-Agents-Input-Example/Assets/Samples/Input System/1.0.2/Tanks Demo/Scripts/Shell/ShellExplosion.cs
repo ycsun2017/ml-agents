@@ -1,28 +1,35 @@
 using UnityEngine;
-
+using UnityEngine.Serialization;
 
 public class ShellExplosion : MonoBehaviour
 {
-    public LayerMask m_TankMask;                            // Used to filter what the explosion affects, this should be set to "Players".
-    public ParticleSystem m_ExplosionParticles;             // Reference to the particles that will play on explosion.
-    public AudioSource m_ExplosionAudio;                    // Reference to the audio that will play on explosion.
-    public float m_MaxDamage = 100f;                        // The amount of damage done if the explosion is centred on a tank.
-    public float m_ExplosionForce = 1000f;                  // The amount of force added to a tank at the centre of the explosion.
-    public float m_MaxLifeTime = 2f;                        // The time in seconds before the shell is removed.
-    public float m_ExplosionRadius = 5f;                    // The maximum distance away from the explosion tanks can be and are still affected.
+    [FormerlySerializedAs("m_TankMask")]
+    public LayerMask tankMask;                            // Used to filter what the explosion affects, this should be set to "Players".
+    [FormerlySerializedAs("m_ExplosionParticles")]
+    public ParticleSystem explosionParticles;             // Reference to the particles that will play on explosion.
+    [FormerlySerializedAs("m_ExplosionAudio")]
+    public AudioSource explosionAudio;                    // Reference to the audio that will play on explosion.
+    [FormerlySerializedAs("m_MaxDamage")]
+    public float maxDamage = 100f;                        // The amount of damage done if the explosion is centred on a tank.
+    [FormerlySerializedAs("m_ExplosionForce")]
+    public float explosionForce = 1000f;                  // The amount of force added to a tank at the centre of the explosion.
+    [FormerlySerializedAs("m_MaxLifeTime")]
+    public float maxLifeTime = 2f;                        // The time in seconds before the shell is removed.
+    [FormerlySerializedAs("m_ExplosionRadius")]
+    public float explosionRadius = 5f;                    // The maximum distance away from the explosion tanks can be and are still affected.
 
     public TankAgent SourceTank;
 
-    private void Start()
+    void Start()
     {
         // If it isn't destroyed by then, destroy the shell after it's lifetime.
-        Destroy(gameObject, m_MaxLifeTime);
+        Destroy(gameObject, maxLifeTime);
     }
 
-    private void OnTriggerEnter(Collider other)
+    void OnTriggerEnter(Collider other)
     {
         // Collect all the colliders in a sphere from the shell's current position to a radius of the explosion radius.
-        Collider[] colliders = Physics.OverlapSphere(transform.position, m_ExplosionRadius, m_TankMask);
+        Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, tankMask);
 
         // Go through all the colliders...
         for (int i = 0; i < colliders.Length; i++)
@@ -35,10 +42,11 @@ public class ShellExplosion : MonoBehaviour
                 continue;
 
             // Add an explosion force.
-            targetRigidbody.AddExplosionForce(m_ExplosionForce, transform.position, m_ExplosionRadius);
+            targetRigidbody.AddExplosionForce(explosionForce, transform.position, explosionRadius);
 
             // Find the TankHealth script associated with the rigidbody.
             TankHealth targetHealth = targetRigidbody.GetComponent<TankHealth>();
+            var targetTank = targetRigidbody.GetComponent<TankAgent>();
 
             // If there is no TankHealth script attached to the gameobject, go on to the next collider.
             if (!targetHealth)
@@ -51,29 +59,30 @@ public class ShellExplosion : MonoBehaviour
             targetHealth.TakeDamage(damage);
             if (targetHealth.isDead)
             {
-                SourceTank.SetReward(1f);
+                var reward = SourceTank == targetTank ? -1f : 1f;
+                SourceTank.SetReward(reward);
                 SourceTank.EndEpisode();
             }
         }
 
         // Unparent the particles from the shell.
-        m_ExplosionParticles.transform.parent = null;
+        explosionParticles.transform.parent = null;
 
         // Play the particle system.
-        m_ExplosionParticles.Play();
+        explosionParticles.Play();
 
         // Play the explosion sound effect.
-        m_ExplosionAudio.Play();
+        // explosionAudio.Play();
 
         // Once the particles have finished, destroy the gameobject they are on.
-        ParticleSystem.MainModule mainModule = m_ExplosionParticles.main;
-        Destroy(m_ExplosionParticles.gameObject, mainModule.duration);
+        ParticleSystem.MainModule mainModule = explosionParticles.main;
+        Destroy(explosionParticles.gameObject, mainModule.duration);
 
         // Destroy the shell.
         Destroy(gameObject);
     }
 
-    private float CalculateDamage(Vector3 targetPosition)
+    float CalculateDamage(Vector3 targetPosition)
     {
         // Create a vector from the shell to the target.
         Vector3 explosionToTarget = targetPosition - transform.position;
@@ -82,10 +91,10 @@ public class ShellExplosion : MonoBehaviour
         float explosionDistance = explosionToTarget.magnitude;
 
         // Calculate the proportion of the maximum distance (the explosionRadius) the target is away.
-        float relativeDistance = (m_ExplosionRadius - explosionDistance) / m_ExplosionRadius;
+        float relativeDistance = (explosionRadius - explosionDistance) / explosionRadius;
 
         // Calculate damage as this proportion of the maximum possible damage.
-        float damage = relativeDistance * m_MaxDamage;
+        float damage = relativeDistance * maxDamage;
 
         // Make sure that the minimum damage is always 0.
         damage = Mathf.Max(0f, damage);

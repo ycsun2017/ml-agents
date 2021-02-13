@@ -11,7 +11,8 @@ public class CustomEventSystem : EventSystem
             InputSystem.onDeviceCommand += InputSystemOnDeviceCommand;
         }
     }
-    private static unsafe long? InputSystemOnDeviceCommand(InputDevice device, InputDeviceCommand* command)
+
+    static unsafe long? InputSystemOnDeviceCommand(InputDevice device, InputDeviceCommand* command)
     {
         if (command->type != QueryCanRunInBackground.Type)
         {

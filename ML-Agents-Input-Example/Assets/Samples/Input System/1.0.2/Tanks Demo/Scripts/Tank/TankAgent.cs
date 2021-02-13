@@ -1,3 +1,4 @@
+using System;
 using System.Net.Sockets;
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
@@ -8,17 +9,25 @@ using UnityEngine;
 public class TankAgent : Agent
 {
     TankAgent m_Opponent;
-    Rigidbody m_Rb;
+    TankShooting m_Shooting;
     BehaviorParameters m_Bp;
+    Rigidbody m_Rb;
+    TankHealth m_Th;
 
     public Transform FireTransform;
 
     const int k_AreaSize = 100;
 
+    void Awake()
+    {
+        m_Bp = GetComponent<BehaviorParameters>();
+        m_Shooting = GetComponent<TankShooting>();
+        m_Rb = GetComponent<Rigidbody>();
+        m_Th = GetComponent<TankHealth>();
+    }
+
     public override void Initialize()
     {
-        m_Rb = GetComponent<Rigidbody>();
-        m_Bp = GetComponent<BehaviorParameters>();
     }
 
     public void SetOpponent(GameObject tank)
@@ -33,7 +42,6 @@ public class TankAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-        AddReward(-1f / MaxStep);
     }
 
     public override void CollectObservations(VectorSensor sensor)
@@ -45,12 +53,14 @@ public class TankAgent : Agent
         }
 
         // Vector to opponent
-        var opponentPos = m_Opponent.transform.position;
-        var myPos = transform.position;
-        sensor.AddObservation(Vector3.Normalize(myPos - opponentPos));
-        sensor.AddObservation(Vector3.Dot((FireTransform.position - opponentPos).normalized, FireTransform.forward));
-        sensor.AddObservation(Vector3.Distance(myPos, opponentPos) / k_AreaSize);
-        sensor.AddObservation(m_Rb.velocity);
-        sensor.AddObservation(transform.localRotation.eulerAngles.normalized.y);
+        sensor.AddObservation(transform.localRotation.normalized.y);
+        var opponentPos = m_Opponent.FireTransform.position;
+        var position = FireTransform.position;
+        // charge time
+        sensor.AddObservation(m_Shooting.m_CurrentLaunchForce / m_Shooting.maxLaunchForce);
+        sensor.AddObservation(m_Rb.velocity.normalized);
+        sensor.AddObservation(m_Th.currentHealth / m_Th.startingHealth);
+        sensor.AddObservation(Vector3.Dot((position - opponentPos).normalized, FireTransform.forward));
+        sensor.AddObservation(Vector3.Distance(position, opponentPos) / k_AreaSize);
     }
 }
