@@ -44,13 +44,30 @@ public class TankShooting : MonoBehaviour, IInputActionAssetProvider
         m_CurrentLaunchForce = minLaunchForce;
         aimSlider.value = minLaunchForce;
         m_TankAgent = GetComponent<TankAgent>();
+        InitializeAction();
+        actions.Player.Fire.performed += CheckFired;
+        actions.Player.Fire.started += CheckFired;
+        actions.Player.Fire.canceled += CheckFired;
     }
 
-    void CheckFired(InputAction action)
+    void OnDisable()
     {
-        m_FireButtonPressedThisFrame = action.WasPressedThisFrame();
-        m_FireButtonReleasedThisFrame = action.WasReleasedThisFrame();
-        m_FireButtonDown = !action.WasPerformedThisFrame();
+        actions.Player.Fire.performed -= CheckFired;
+        actions.Player.Fire.started -= CheckFired;
+        actions.Player.Fire.canceled -= CheckFired;
+    }
+
+    void CheckFired(InputAction.CallbackContext callbackContext)
+    {
+        m_FireButtonPressedThisFrame = callbackContext.started;
+        m_FireButtonReleasedThisFrame = callbackContext.canceled;
+        m_FireButtonDown = callbackContext.performed;
+
+        if (callbackContext.started)
+        {
+            m_Fired = false;
+        }
+
     }
 
     void Start()
@@ -65,7 +82,6 @@ public class TankShooting : MonoBehaviour, IInputActionAssetProvider
         // The slider should have a default value of the minimum launch force.
         aimSlider.value = minLaunchForce;
 
-        CheckFired(actions.Player.Fire);
         // If the max force has been exceeded and the shell hasn't yet been launched...
         if (m_CurrentLaunchForce >= maxLaunchForce && !m_Fired)
         {
@@ -77,18 +93,16 @@ public class TankShooting : MonoBehaviour, IInputActionAssetProvider
         else if (m_FireButtonPressedThisFrame && !m_FireButtonDown)
         {
             // ... reset the fired flag and reset the launch force.
-            m_Fired = false;
+            // m_Fired = false;
             m_CurrentLaunchForce = minLaunchForce;
 
             // Change the clip to the charging clip and start it playing.
             // shootingAudio.clip = chargingClip;
             // shootingAudio.Play();
 
-            m_FireButtonDown = true;
-            m_FireButtonPressedThisFrame = false;
         }
         // Otherwise, if the fire button is being held and the shell hasn't been launched yet...
-        else if (!m_FireButtonPressedThisFrame && m_FireButtonDown && !m_Fired && !m_FireButtonReleasedThisFrame)
+        else if (m_FireButtonDown && !m_Fired)
         {
             // Increment the launch force and update the slider.
             m_CurrentLaunchForce += m_ChargeSpeed * Time.deltaTime;
@@ -141,25 +155,20 @@ public class TankShooting : MonoBehaviour, IInputActionAssetProvider
         // when OnFire is called during initial button press.
         // It will be false when OnFire is called during button release.
 
-        if (value.isPressed)
-        {
-            m_FireButtonPressedThisFrame = true;
-            m_FireButtonReleasedThisFrame = false;
-        }
-        else
-        {
-            m_FireButtonPressedThisFrame = false;
-            m_FireButtonReleasedThisFrame = true;
-        }
     }
 
     public (InputActionAsset, IInputActionCollection2) GetInputActionAsset()
+    {
+        InitializeAction();
+        return (actions.asset, actions);
+    }
+
+    void InitializeAction()
     {
         if (actions == null)
         {
             actions = new TanksInputActions();
             actions.Enable();
         }
-        return (actions.asset, actions);
     }
 }

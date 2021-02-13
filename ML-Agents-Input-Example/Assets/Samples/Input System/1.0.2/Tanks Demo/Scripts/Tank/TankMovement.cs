@@ -36,9 +36,6 @@ public class TankMovement : MonoBehaviour
     void Awake()
     {
 
-        var (_, a) = GetComponent<IInputActionAssetProvider>().GetInputActionAsset();
-        actions = a as TanksInputActions;
-        Assert.IsNotNull(actions);
 
         m_Rigidbody = GetComponent<Rigidbody>();
     }
@@ -60,6 +57,19 @@ public class TankMovement : MonoBehaviour
         {
             m_ParticleSystems[i].Play();
         }
+        var (_, a) = GetComponent<IInputActionAssetProvider>().GetInputActionAsset();
+        actions = a as TanksInputActions;
+        Assert.IsNotNull(actions);
+
+        actions.Player.Gas.started += GasOnperformed;
+        actions.Player.Gas.performed += GasOnperformed;
+        actions.Player.Gas.canceled += GasOnperformed;
+        actions.Player.Brake.performed += BrakeOnperformed;
+        actions.Player.Brake.canceled += BrakeOnperformed;
+        actions.Player.Brake.started += BrakeOnperformed;
+        actions.Player.Turret.performed += TurretOnperformed;
+        actions.Player.Turret.canceled += TurretOnperformed;
+        actions.Player.Turret.started += TurretOnperformed;
     }
 
     void OnDisable()
@@ -72,6 +82,16 @@ public class TankMovement : MonoBehaviour
         {
             m_ParticleSystems[i].Stop();
         }
+
+        actions.Player.Gas.started -= GasOnperformed;
+        actions.Player.Gas.started -= GasOnperformed;
+        actions.Player.Gas.started -= GasOnperformed;
+        actions.Player.Brake.started -= BrakeOnperformed;
+        actions.Player.Brake.started -= BrakeOnperformed;
+        actions.Player.Brake.started -= BrakeOnperformed;
+        actions.Player.Turret.started -= TurretOnperformed;
+        actions.Player.Turret.started -= TurretOnperformed;
+        actions.Player.Turret.started -= TurretOnperformed;
     }
 
     void Start()
@@ -117,9 +137,9 @@ public class TankMovement : MonoBehaviour
     {
         // Adjust the rigidbodies position and orientation in FixedUpdate.
         var actionsPlayer = actions.Player;
-        TurretOnperformed(actionsPlayer.Turret);
-        GasOnperformed(actionsPlayer.Gas);
-        BrakeOnperformed(actionsPlayer.Brake);
+        // TurretOnperformed(actionsPlayer.Turret);
+        // GasOnperformed(actionsPlayer.Gas);
+        // BrakeOnperformed(actionsPlayer.Brake);
         Move();
         Turn();
     }
@@ -133,17 +153,17 @@ public class TankMovement : MonoBehaviour
         m_Rigidbody.MovePosition(m_Rigidbody.position + movement);
     }
 
-    void TurretOnperformed(InputAction obj)
+    void TurretOnperformed(InputAction.CallbackContext obj)
     {
         m_TurnInputValue = obj.ReadValue<float>();
     }
 
-    void GasOnperformed(InputAction obj)
+    void GasOnperformed(InputAction.CallbackContext obj)
     {
         m_MovementInputValue = obj.ReadValue<float>();
     }
 
-    void BrakeOnperformed(InputAction obj)
+    void BrakeOnperformed(InputAction.CallbackContext obj)
     {
         m_MovementInputValue = -obj.ReadValue<float>();
     }
