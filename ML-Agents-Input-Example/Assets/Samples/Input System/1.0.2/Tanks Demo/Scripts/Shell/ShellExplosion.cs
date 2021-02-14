@@ -31,7 +31,6 @@ public class ShellExplosion : MonoBehaviour
         // Collect all the colliders in a sphere from the shell's current position to a radius of the explosion radius.
         Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, tankMask);
 
-        var tankHit = false;
         // Go through all the colliders...
         for (int i = 0; i < colliders.Length; i++)
         {
@@ -53,7 +52,6 @@ public class ShellExplosion : MonoBehaviour
             if (!targetHealth)
                 continue;
 
-            tankHit = true;
             // Calculate the amount of damage the target should take based on it's distance from the shell.
             float damage = CalculateDamage(targetRigidbody.position);
 
