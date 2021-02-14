@@ -5192,8 +5192,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 7
-    NumStackedVectorObservations: 3
+    VectorObservationSize: 4
+    NumStackedVectorObservations: 8
     m_ActionSpec:
       m_NumContinuousActions: 0
       BranchSizes: 
@@ -5225,7 +5225,6 @@ MonoBehaviour:
     maxStep: 0
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
-  FireTransform: {fileID: 2855894493477563013}
 --- !u!114 &-8977268497864132443
 MonoBehaviour:
   m_ObjectHideFlags: 0
