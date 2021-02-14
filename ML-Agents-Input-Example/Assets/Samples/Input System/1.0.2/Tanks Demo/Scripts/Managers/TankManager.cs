@@ -61,7 +61,6 @@ public class TankManager
     public void SetOpponent(GameObject tank)
     {
         var agent = instance.GetComponent<TankAgent>();
-        agent.SetOpponent(tank);
         agent.SetTeam(playerNumber - 1);
     }
 
