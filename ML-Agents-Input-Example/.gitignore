@@ -3,4 +3,5 @@ Logs/
 Temp/
 obj/
 Library/
+Packages/packages-lock.json
 Assets/ML-Agents/Timers/

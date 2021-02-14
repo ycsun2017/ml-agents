@@ -562,6 +562,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 101518, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
     - target: {fileID: 101908, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
       propertyPath: m_Layer
       value: 9
@@ -595,6 +599,10 @@ PrefabInstance:
       value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 115324, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Layer
+      value: 9
+      objectReference: {fileID: 0}
+    - target: {fileID: 115872, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
       propertyPath: m_Layer
       value: 9
       objectReference: {fileID: 0}
@@ -645,6 +653,10 @@ PrefabInstance:
     - target: {fileID: 124778, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
       propertyPath: m_TagString
       value: terrain
+      objectReference: {fileID: 0}
+    - target: {fileID: 125100, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Layer
+      value: 9
       objectReference: {fileID: 0}
     - target: {fileID: 125106, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
       propertyPath: m_Layer
@@ -950,6 +962,26 @@ PrefabInstance:
       propertyPath: m_LightmapParameters
       value: 
       objectReference: {fileID: 15204, guid: 0000000000000000f000000000000000, type: 0}
+    - target: {fileID: 6570560, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Size.z
+      value: 10.21727
+      objectReference: {fileID: 0}
+    - target: {fileID: 6570560, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Center.z
+      value: -49.650383
+      objectReference: {fileID: 0}
+    - target: {fileID: 6589546, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Size.z
+      value: 9.707602
+      objectReference: {fileID: 0}
+    - target: {fileID: 6589546, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Center.x
+      value: 3.4625359
+      objectReference: {fileID: 0}
+    - target: {fileID: 6589546, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
+      propertyPath: m_Center.z
+      value: -49.90655
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 312c52d27be2d2d42acea3ccebc4694b, type: 3}
 --- !u!1 &1168633241
@@ -1097,8 +1129,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   numRoundsToWin: 500000000
-  startDelay: 0
-  endDelay: 0
+  startDelay: 3
+  endDelay: 3
   cameraControl: {fileID: 1771596988}
   messageText: {fileID: 102963701}
   tankPrefab: {fileID: 2855894493477824887, guid: 926cad17a320cc74a9d2bbf498411492,
