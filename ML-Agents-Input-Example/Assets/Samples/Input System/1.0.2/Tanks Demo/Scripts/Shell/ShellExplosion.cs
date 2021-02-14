@@ -45,8 +45,16 @@ public class ShellExplosion : MonoBehaviour
             targetRigidbody.AddExplosionForce(explosionForce, transform.position, explosionRadius);
 
             // Find the TankHealth script associated with the rigidbody.
-            TankHealth targetHealth = targetRigidbody.GetComponent<TankHealth>();
+            var targetHealth = targetRigidbody.GetComponent<TankHealth>();
             var targetTank = targetRigidbody.GetComponent<TankAgent>();
+            if (ReferenceEquals(SourceTank, targetTank))
+            {
+                SourceTank.AddReward(-0.05f);
+            }
+            else
+            {
+                SourceTank.AddReward(0.05f);
+            }
 
             // If there is no TankHealth script attached to the gameobject, go on to the next collider.
             if (!targetHealth)

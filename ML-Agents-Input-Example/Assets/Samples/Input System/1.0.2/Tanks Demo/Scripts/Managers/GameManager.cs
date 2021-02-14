@@ -203,12 +203,12 @@ public class GameManager : MonoBehaviour
             if (tanks[i].instance.activeSelf)
             {
                 ret = tanks[i];
-                tankAgent.SetReward(1f);
+                tankAgent.AddReward(1f);
                 tankAgent.EndEpisode();
             }
             else
             {
-                tankAgent.SetReward(-1f);
+                tankAgent.AddReward(-1f);
                 tankAgent.EndEpisode();
             }
         }
