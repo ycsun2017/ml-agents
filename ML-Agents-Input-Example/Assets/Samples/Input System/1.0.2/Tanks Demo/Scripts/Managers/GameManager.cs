@@ -204,12 +204,10 @@ public class GameManager : MonoBehaviour
             {
                 tanks[i].instance.GetComponent<TankAgent>().SetReward(-1f);
             }
-
-            return ret;
         }
 
         // If none of the tanks are active it is a draw so return null.
-        return null;
+        return ret;
     }
 
     // This function is to find out if there is a winner of the game.
