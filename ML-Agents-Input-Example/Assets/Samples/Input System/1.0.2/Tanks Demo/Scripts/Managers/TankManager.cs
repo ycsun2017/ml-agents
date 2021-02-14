@@ -89,11 +89,6 @@ public class TankManager
         instance.transform.position = spawnPoint.position;
         instance.transform.rotation = spawnPoint.rotation;
 
-        // end the episode of the tank that won.
-        if (!m_TankHealth.isDead)
-        {
-            m_TankAgent.EndEpisode();
-        }
         instance.SetActive(false);
         instance.SetActive(true);
     }

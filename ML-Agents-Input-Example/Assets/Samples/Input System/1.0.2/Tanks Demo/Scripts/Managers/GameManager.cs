@@ -195,21 +195,22 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < tanks.Length; i++)
         {
             // ... and if one of them is active, it is the winner so return it.
+            var tankAgent = tanks[i].instance.GetComponent<TankAgent>();
             if (tanks[i].instance.activeSelf)
             {
                 ret = tanks[i];
-                ret.instance.GetComponent<TankAgent>().SetReward(1f);
+                tankAgent.SetReward(1f);
+                tankAgent.EndEpisode();
             }
             else
             {
-                tanks[i].instance.GetComponent<TankAgent>().SetReward(-1f);
+                tankAgent.SetReward(-1f);
+                tankAgent.EndEpisode();
             }
-
-            return ret;
         }
 
         // If none of the tanks are active it is a draw so return null.
-        return null;
+        return ret;
     }
 
     // This function is to find out if there is a winner of the game.
