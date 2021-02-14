@@ -84,10 +84,10 @@ public class TankManager
     }
 
     // Used at the start of each round to put the tank into it's default state.
-    public void Reset()
+    public void Reset(Transform spawn)
     {
-        instance.transform.position = spawnPoint.position;
-        instance.transform.rotation = spawnPoint.rotation;
+        instance.transform.position = spawn.position;
+        instance.transform.rotation = spawn.rotation;
 
         instance.SetActive(false);
         instance.SetActive(true);

@@ -4,7 +4,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
-
+using UnityEngine.Windows.Speech;
+using Object = System.Object;
+using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
@@ -22,6 +24,8 @@ public class GameManager : MonoBehaviour
     public GameObject tankPrefab;             // Reference to the prefab the players will control.
     [FormerlySerializedAs("m_Tanks")]
     public TankManager[] tanks;               // A collection of managers for enabling and disabling different aspects of the tanks.
+
+    public Transform[] spawnPoints;
 
     int m_RoundNumber;                  // Which round the game is currently on.
     WaitForSeconds m_StartWait;         // Used to have a delay whilst the round starts.
@@ -257,10 +261,23 @@ public class GameManager : MonoBehaviour
     // This function is used to turn all the tanks back on and reset their positions and properties.
     void ResetAllTanks()
     {
+        var spawn1 = GetRandomSpawnPoint();
+        var spawn2 = spawn1;
+        var count = 0;
+        while (ReferenceEquals(spawn1, spawn2) && count++ < 10)
+        {
+            spawn2 = GetRandomSpawnPoint();
+        }
+
         for (int i = 0; i < tanks.Length; i++)
         {
-            tanks[i].Reset();
+            tanks[i].Reset(i % 2 == 0 ? spawn1 : spawn2);
         }
+    }
+
+    Transform GetRandomSpawnPoint()
+    {
+        return spawnPoints[Mathf.FloorToInt(Random.Range(0, spawnPoints.Length - 1))];
     }
 
     void EnableTankControl()

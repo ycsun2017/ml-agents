@@ -65,7 +65,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.ml-agents": {
-      "version": "file:/Users/christophergoy/code/ml-agents/com.unity.ml-agents",
+      "version": "file:../../com.unity.ml-agents",
       "depth": 0,
       "source": "local",
       "dependencies": {
@@ -78,7 +78,7 @@
       }
     },
     "com.unity.ml-agents.extensions": {
-      "version": "file:/Users/christophergoy/code/ml-agents/com.unity.ml-agents.extensions",
+      "version": "file:../../com.unity.ml-agents.extensions",
       "depth": 0,
       "source": "local",
       "dependencies": {
@@ -117,7 +117,8 @@
       "depth": 0,
       "source": "builtin",
       "dependencies": {
-        "com.unity.modules.ui": "1.0.0"
+        "com.unity.modules.ui": "1.0.0",
+        "com.unity.modules.imgui": "1.0.0"
       }
     },
     "com.unity.modules.ai": {
