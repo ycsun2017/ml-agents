@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2855894493477563013}
+  - component: {fileID: 6999997260002359099}
   m_Layer: 0
   m_Name: FireTransform
   m_TagString: Untagged
@@ -30,6 +31,33 @@ Transform:
   m_Father: {fileID: 2855894493477536293}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6999997260002359099
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2855894493477807085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SensorName: RayPerceptionSensor
+  m_DetectableTags:
+  - terrain
+  m_RaysPerDirection: 1
+  m_MaxRayDegrees: 6
+  m_SphereCastRadius: 0.5
+  m_RayLength: 15
+  m_RayLayerMask:
+    serializedVersion: 2
+    m_Bits: 768
+  m_ObservationStacks: 5
+  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
+  rayMissColor: {r: 1, g: 1, b: 1, a: 1}
+  m_StartVerticalOffset: 0
+  m_EndVerticalOffset: -0.6
 --- !u!1 &2855894493477821153
 GameObject:
   m_ObjectHideFlags: 0
@@ -4761,6 +4789,8 @@ GameObject:
   - component: {fileID: 5092654722462045579}
   - component: {fileID: -8977268497864132443}
   - component: {fileID: 2617640673225564508}
+  - component: {fileID: 1740605957079586335}
+  - component: {fileID: -498136289636861207}
   m_Layer: 8
   m_Name: Tank
   m_TagString: tank
@@ -5208,7 +5238,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DecisionPeriod: 5
+  DecisionPeriod: 8
   TakeActionsBetweenDecisions: 1
 --- !u!114 &2617640673225564508
 MonoBehaviour:
@@ -5223,24 +5253,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Name: TankGrid
-  CellScaleX: 2
-  CellScaleZ: 2
+  CellScaleX: 3
+  CellScaleZ: 3
   GridNumSideX: 40
   GridNumSideZ: 40
   CellScaleY: 5
-  RotateToAgent: 0
-  ChannelDepth: 04000000
+  RotateToAgent: 1
+  ChannelDepth: 03000000
   DetectableObjects:
   - tank
   - shell
-  - terrain
   ObserveMask:
     serializedVersion: 2
-    m_Bits: 768
+    m_Bits: 1280
   gridDepthType: 1
   rootReference: {fileID: 2855894493477824887}
-  ObservationPerCell: 4
-  NumberOfObservations: 6400
+  ObservationPerCell: 3
+  NumberOfObservations: 4800
   ChannelOffsets: 00000000
   DebugColors:
   - {r: 1, g: 0.8690778, b: 0, a: 0}
@@ -5249,6 +5278,60 @@ MonoBehaviour:
   GizmoYOffset: 0.5
   ShowGizmos: 1
   CompressionType: 1
+--- !u!114 &1740605957079586335
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2855894493477824887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SensorName: RayPerceptionSensorTank
+  m_DetectableTags:
+  - tank
+  m_RaysPerDirection: 1
+  m_MaxRayDegrees: 6
+  m_SphereCastRadius: 0.5
+  m_RayLength: 87
+  m_RayLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  m_ObservationStacks: 8
+  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
+  rayMissColor: {r: 1, g: 1, b: 1, a: 1}
+  m_StartVerticalOffset: 1
+  m_EndVerticalOffset: 1
+--- !u!114 &-498136289636861207
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2855894493477824887}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SensorName: RayPerceptionSensorBack
+  m_DetectableTags:
+  - tank
+  m_RaysPerDirection: 1
+  m_MaxRayDegrees: 177
+  m_SphereCastRadius: 0.5
+  m_RayLength: 87
+  m_RayLayerMask:
+    serializedVersion: 2
+    m_Bits: 256
+  m_ObservationStacks: 8
+  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
+  rayMissColor: {r: 1, g: 1, b: 1, a: 1}
+  m_StartVerticalOffset: 1
+  m_EndVerticalOffset: 1
 --- !u!1 &2855894493477825447
 GameObject:
   m_ObjectHideFlags: 0
