@@ -191,11 +191,21 @@ public class GameManager : MonoBehaviour
     TankManager GetRoundWinner()
     {
         // Go through all the tanks...
+        TankManager ret = null;
         for (int i = 0; i < tanks.Length; i++)
         {
             // ... and if one of them is active, it is the winner so return it.
             if (tanks[i].instance.activeSelf)
-                return tanks[i];
+            {
+                ret = tanks[i];
+                ret.instance.GetComponent<TankAgent>().SetReward(1f);
+            }
+            else
+            {
+                tanks[i].instance.GetComponent<TankAgent>().SetReward(-1f);
+            }
+
+            return ret;
         }
 
         // If none of the tanks are active it is a draw so return null.

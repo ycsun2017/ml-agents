@@ -80,7 +80,7 @@ GameObject:
   - component: {fileID: 13668334}
   m_Layer: 0
   m_Name: Cliff (3)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -569,7 +569,7 @@ GameObject:
   - component: {fileID: 13626320}
   m_Layer: 0
   m_Name: Cactus (3)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -1077,7 +1077,7 @@ GameObject:
   - component: {fileID: 474252}
   m_Layer: 0
   m_Name: Boundaries
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -1114,7 +1114,7 @@ GameObject:
   - component: {fileID: 13635388}
   m_Layer: 0
   m_Name: Tree (3)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -1302,7 +1302,7 @@ GameObject:
   - component: {fileID: 13651568}
   m_Layer: 0
   m_Name: Tree (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -1475,7 +1475,7 @@ GameObject:
   - component: {fileID: 2394048}
   m_Layer: 0
   m_Name: PalmTree (8)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -1571,7 +1571,7 @@ GameObject:
   - component: {fileID: 13628582}
   m_Layer: 0
   m_Name: Cliff (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -1992,7 +1992,7 @@ GameObject:
   - component: {fileID: 13629606}
   m_Layer: 0
   m_Name: Tree (4)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -2369,7 +2369,7 @@ GameObject:
   - component: {fileID: 6576880}
   m_Layer: 0
   m_Name: PumpJack (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -2730,7 +2730,7 @@ GameObject:
   - component: {fileID: 2387946}
   m_Layer: 0
   m_Name: PalmTree (5)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -3023,7 +3023,7 @@ GameObject:
   - component: {fileID: 431454}
   m_Layer: 0
   m_Name: OilField
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -3075,7 +3075,7 @@ GameObject:
   - component: {fileID: 13615596}
   m_Layer: 0
   m_Name: Cliff (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -3349,7 +3349,7 @@ GameObject:
   - component: {fileID: 2301142}
   m_Layer: 0
   m_Name: Crater01 (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -3910,7 +3910,7 @@ GameObject:
   - component: {fileID: 2322440}
   m_Layer: 0
   m_Name: Crater01
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -4325,7 +4325,7 @@ GameObject:
   - component: {fileID: 13646192}
   m_Layer: 0
   m_Name: Tree (7)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -4877,7 +4877,7 @@ GameObject:
   - component: {fileID: 13608520}
   m_Layer: 0
   m_Name: Cactus (2)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -5050,7 +5050,7 @@ GameObject:
   - component: {fileID: 13650588}
   m_Layer: 0
   m_Name: Cactus
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -5609,7 +5609,7 @@ GameObject:
   - component: {fileID: 450270}
   m_Layer: 0
   m_Name: Trees
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -5945,7 +5945,7 @@ GameObject:
   - component: {fileID: 13635502}
   m_Layer: 0
   m_Name: Tree (9)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -6118,7 +6118,7 @@ GameObject:
   - component: {fileID: 13674150}
   m_Layer: 0
   m_Name: Tree (6)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -6543,7 +6543,7 @@ GameObject:
   - component: {fileID: 13677564}
   m_Layer: 0
   m_Name: Tree
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -7010,7 +7010,7 @@ GameObject:
   - component: {fileID: 6595896}
   m_Layer: 0
   m_Name: PumpJack (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -7464,7 +7464,7 @@ GameObject:
   - component: {fileID: 13676930}
   m_Layer: 0
   m_Name: Cliff
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -7845,7 +7845,7 @@ GameObject:
   - component: {fileID: 2352102}
   m_Layer: 0
   m_Name: Crater01 (3)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -7924,7 +7924,7 @@ GameObject:
   - component: {fileID: 2331236}
   m_Layer: 0
   m_Name: PalmTree (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -8516,7 +8516,7 @@ GameObject:
   - component: {fileID: 2303814}
   m_Layer: 0
   m_Name: PalmTree (7)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -8716,7 +8716,7 @@ GameObject:
   - component: {fileID: 6559430}
   m_Layer: 0
   m_Name: Ruins01
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -9434,7 +9434,7 @@ GameObject:
   - component: {fileID: 467132}
   m_Layer: 0
   m_Name: Ruins
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -9637,7 +9637,7 @@ GameObject:
   - component: {fileID: 6547424}
   m_Layer: 0
   m_Name: PumpJack
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4
@@ -10024,7 +10024,7 @@ GameObject:
   - component: {fileID: 2314830}
   m_Layer: 0
   m_Name: PalmTree (4)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -10527,7 +10527,7 @@ GameObject:
   - component: {fileID: 2396562}
   m_Layer: 0
   m_Name: PalmTree (6)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -10857,7 +10857,7 @@ GameObject:
   - component: {fileID: 2391450}
   m_Layer: 0
   m_Name: PalmTree (3)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -11062,7 +11062,7 @@ GameObject:
   - component: {fileID: 2363076}
   m_Layer: 0
   m_Name: Crater01 (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -11616,7 +11616,7 @@ GameObject:
   - component: {fileID: 13618334}
   m_Layer: 0
   m_Name: Tree (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295
@@ -11789,7 +11789,7 @@ GameObject:
   - component: {fileID: 13612526}
   m_Layer: 0
   m_Name: Cactus (1)
-  m_TagString: Untagged
+  m_TagString: terrain
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 4294967295

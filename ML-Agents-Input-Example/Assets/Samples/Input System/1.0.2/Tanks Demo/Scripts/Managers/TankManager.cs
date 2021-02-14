@@ -27,6 +27,8 @@ public class TankManager
     TankMovement m_Movement;                        // Reference to tank's movement script, used to disable and enable control.
     TankShooting m_Shooting;                        // Reference to tank's shooting script, used to disable and enable control.
     GameObject m_CanvasGameObject;                  // Used to disable the world space UI during the Starting and Ending phases of each round.
+    TankAgent m_TankAgent;
+    TankHealth m_TankHealth;
 
 
     public void Setup()
@@ -34,6 +36,8 @@ public class TankManager
         // Get references to the components.
         m_Movement = instance.GetComponent<TankMovement>();
         m_Shooting = instance.GetComponent<TankShooting>();
+        m_TankAgent = instance.GetComponent<TankAgent>();
+        m_TankHealth = instance.GetComponent<TankHealth>();
         m_CanvasGameObject = instance.GetComponentInChildren<Canvas>().gameObject;
 
         // Set the player numbers to be consistent across the scripts.
@@ -85,6 +89,11 @@ public class TankManager
         instance.transform.position = spawnPoint.position;
         instance.transform.rotation = spawnPoint.rotation;
 
+        // end the episode of the tank that won.
+        if (!m_TankHealth.isDead)
+        {
+            m_TankAgent.EndEpisode();
+        }
         instance.SetActive(false);
         instance.SetActive(true);
     }
