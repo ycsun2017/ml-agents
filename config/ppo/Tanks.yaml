@@ -11,13 +11,10 @@ behaviors:
       num_epoch: 3
       learning_rate_schedule: constant
     network_settings:
-      normalize: true
+      normalize: false
       hidden_units: 256
       num_layers: 2
       vis_encode_type: simple
-      memory:
-        sequence_length: 64
-        memory_size: 256
     reward_signals:
       extrinsic:
         gamma: 0.99
