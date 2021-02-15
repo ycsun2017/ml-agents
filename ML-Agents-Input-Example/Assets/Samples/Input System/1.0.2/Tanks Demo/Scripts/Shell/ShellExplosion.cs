@@ -51,7 +51,7 @@ public class ShellExplosion : MonoBehaviour
             {
                 SourceTank.AddReward(-0.05f);
             }
-            else
+            else if (!ReferenceEquals(null, targetTank))
             {
                 SourceTank.AddReward(0.05f);
             }
