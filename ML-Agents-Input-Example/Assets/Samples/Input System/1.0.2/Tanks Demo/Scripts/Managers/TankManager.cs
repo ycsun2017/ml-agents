@@ -1,5 +1,7 @@
 using System;
+using System.ComponentModel;
 using Unity.MLAgents.Extensions.Input;
+using Unity.MLAgents.Policies;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -23,6 +25,7 @@ public class TankManager
     [HideInInspector] public GameObject instance;         // A reference to the instance of the tank when it is created.
     [FormerlySerializedAs("m_Wins")]
     [HideInInspector] public int wins;                    // The number of wins this player has so far.
+    public bool isHeuristic;
 
     TankMovement m_Movement;                        // Reference to tank's movement script, used to disable and enable control.
     TankShooting m_Shooting;                        // Reference to tank's shooting script, used to disable and enable control.
@@ -39,6 +42,13 @@ public class TankManager
         m_TankAgent = instance.GetComponent<TankAgent>();
         m_TankHealth = instance.GetComponent<TankHealth>();
         m_CanvasGameObject = instance.GetComponentInChildren<Canvas>().gameObject;
+        if (isHeuristic)
+        {
+            var bp = instance.GetComponent<BehaviorParameters>();
+            bp.BehaviorType = BehaviorType.HeuristicOnly;
+            Reset(instance.transform);
+            instance.GetComponent<InputActuatorComponent>().UpdateDeviceBinding(true);
+        }
 
         // Set the player numbers to be consistent across the scripts.
         m_Movement.playerNumber = playerNumber;

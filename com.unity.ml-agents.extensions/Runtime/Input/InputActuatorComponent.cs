@@ -138,21 +138,29 @@ namespace Unity.MLAgents.Extensions.Input
             return m_Actuators;
         }
 
-        void UpdateDeviceBinding(bool isInHeuristicMode)
+        public void UpdateDeviceBinding(bool isInHeuristicMode)
         {
             m_ControlScheme = CreateControlScheme(m_Device, m_LocalId, isInHeuristicMode, m_InputAsset);
             if (m_InputAsset.FindControlSchemeIndex(m_ControlScheme.name) != -1)
             {
                 m_InputAsset.RemoveControlScheme(m_ControlScheme.name);
             }
-            m_InputAsset.AddControlScheme(m_ControlScheme);
 
-            var inputActionMap = m_InputAsset.FindActionMap(m_PlayerInput.defaultActionMap);
             if (!isInHeuristicMode)
             {
+                var inputActionMap = m_InputAsset.FindActionMap(m_PlayerInput.defaultActionMap);
+                m_InputAsset.AddControlScheme(m_ControlScheme);
                 m_InputAssetCollection.bindingMask = InputBinding.MaskByGroup(m_ControlScheme.bindingGroup);
                 m_InputAssetCollection.devices = new ReadOnlyArray<InputDevice>(new[] { m_Device });
                 inputActionMap.devices = m_InputAssetCollection.devices;
+            }
+            else
+            {
+                var inputActionMap = m_InputAsset.FindActionMap(m_PlayerInput.defaultActionMap);
+                m_InputAssetCollection.bindingMask = null;
+                m_InputAssetCollection.devices = InputSystem.devices;
+                inputActionMap.devices = InputSystem.devices;
+                m_InputAssetCollection.Enable();
             }
         }
 

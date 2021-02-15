@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2855894493477563013}
+  - component: {fileID: 6999997260002359099}
   m_Layer: 0
   m_Name: FireTransform
   m_TagString: Untagged
@@ -30,6 +31,33 @@ Transform:
   m_Father: {fileID: 2855894493477536293}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6999997260002359099
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2855894493477807085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bb6b867a41448888c1cd4f99643ad71, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SensorName: RayPerceptionSensor
+  m_DetectableTags:
+  - terrain
+  m_RaysPerDirection: 1
+  m_MaxRayDegrees: 6
+  m_SphereCastRadius: 0.5
+  m_RayLength: 15
+  m_RayLayerMask:
+    serializedVersion: 2
+    m_Bits: 768
+  m_ObservationStacks: 5
+  rayHitColor: {r: 1, g: 0, b: 0, a: 1}
+  rayMissColor: {r: 1, g: 1, b: 1, a: 1}
+  m_StartVerticalOffset: 0
+  m_EndVerticalOffset: -0.6
 --- !u!1 &2855894493477821153
 GameObject:
   m_ObjectHideFlags: 0
@@ -5173,7 +5201,7 @@ MonoBehaviour:
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
-  m_Model: {fileID: 5022602860645237092, guid: 485236e8850334c639afefe3cef6d2d9, type: 3}
+  m_Model: {fileID: 5022602860645237092, guid: 2473d2d483f914b869221ca66f5770e9, type: 3}
   m_InferenceDevice: 0
   m_BehaviorType: 0
   m_BehaviorName: Tanks
@@ -5209,7 +5237,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DecisionPeriod: 5
+  DecisionPeriod: 8
   TakeActionsBetweenDecisions: 1
 --- !u!114 &2617640673225564508
 MonoBehaviour:
@@ -5230,21 +5258,20 @@ MonoBehaviour:
   GridNumSideZ: 40
   CellScaleY: 5
   RotateToAgent: 1
-  ChannelDepth: 04000000
+  ChannelDepth: 03000000
   DetectableObjects:
   - tank
   - shell
-  - terrain
   ObserveMask:
     serializedVersion: 2
-    m_Bits: 1792
+    m_Bits: 1280
   gridDepthType: 1
   rootReference: {fileID: 2855894493477824887}
-  ObservationPerCell: 4
-  NumberOfObservations: 6400
+  ObservationPerCell: 3
+  NumberOfObservations: 4800
   ChannelOffsets: 00000000
   DebugColors:
-  - {r: 0.0102956295, g: 1, b: 0, a: 0}
+  - {r: 1, g: 0.8690778, b: 0, a: 0}
   - {r: 0, g: 0.35168457, b: 1, a: 0}
   - {r: 1, g: 0.22373962, b: 0, a: 0}
   GizmoYOffset: 0.5

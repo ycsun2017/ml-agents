@@ -757,8 +757,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   numRoundsToWin: 500000000
-  startDelay: 0
-  endDelay: 0
+  startDelay: 3
+  endDelay: 3
   cameraControl: {fileID: 1771596988}
   messageText: {fileID: 102963701}
   tankPrefab: {fileID: 2855894493477824887, guid: 926cad17a320cc74a9d2bbf498411492,
@@ -770,12 +770,14 @@ MonoBehaviour:
     coloredPlayerText: 
     instance: {fileID: 0}
     wins: 0
+    isHeuristic: 1
   - playerColor: {r: 0.8980392, g: 0.18039216, b: 0.15686275, a: 0}
     spawnPoint: {fileID: 2083660209}
     playerNumber: 2
     coloredPlayerText: 
     instance: {fileID: 0}
     wins: 0
+    isHeuristic: 0
   spawnPoints:
   - {fileID: 194018016}
   - {fileID: 2083660209}
@@ -784,10 +786,6 @@ MonoBehaviour:
   - {fileID: 661897828}
   - {fileID: 1137415874}
   - {fileID: 1155732988}
-  - {fileID: 416936945}
-  - {fileID: 1996607853}
-  - {fileID: 1168633242}
-  - {fileID: 1076556880}
 --- !u!4 &1304999366
 Transform:
   m_ObjectHideFlags: 0
