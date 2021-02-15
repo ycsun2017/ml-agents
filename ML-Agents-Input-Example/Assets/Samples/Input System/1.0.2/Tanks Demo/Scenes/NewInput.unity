@@ -757,8 +757,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   numRoundsToWin: 500000000
-  startDelay: 3
-  endDelay: 3
+  startDelay: 0
+  endDelay: 0
   cameraControl: {fileID: 1771596988}
   messageText: {fileID: 102963701}
   tankPrefab: {fileID: 2855894493477824887, guid: 926cad17a320cc74a9d2bbf498411492,
@@ -784,6 +784,10 @@ MonoBehaviour:
   - {fileID: 661897828}
   - {fileID: 1137415874}
   - {fileID: 1155732988}
+  - {fileID: 416936945}
+  - {fileID: 1996607853}
+  - {fileID: 1168633242}
+  - {fileID: 1076556880}
 --- !u!4 &1304999366
 Transform:
   m_ObjectHideFlags: 0
