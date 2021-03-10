@@ -161,6 +161,54 @@ class SACSettings(HyperparamSettings):
     def _reward_signal_steps_per_update_default(self):
         return self.steps_per_update
 
+@attr.s(auto_attribs=True)
+class SACTransferSettings(HyperparamSettings):
+    batch_size: int = 128
+    buffer_size: int = 50000
+    buffer_init_steps: int = 0
+    tau: float = 0.005
+    steps_per_update: float = 1
+    save_replay_buffer: bool = False
+    init_entcoef: float = 1.0
+    reward_signal_steps_per_update: float = attr.ib()
+
+    # Transfer
+    use_transfer: bool = False
+    transfer_path: str = ""
+    load_model: bool = True
+    load_value: bool = False
+    load_policy: bool = False
+    load_encoder: bool = False
+    load_action: bool = False
+
+    # Network
+    encoder_layers: int = 1
+    action_layers: int = -1
+    policy_layers: int = 1
+    value_layers: int = 1
+    forward_layers: int = 1
+    inverse_layers: int = 1
+    feature_size: int = 64
+    action_feature_size: int = 16
+
+    @reward_signal_steps_per_update.default
+    def _reward_signal_steps_per_update_default(self):
+        return self.steps_per_update
+
+@attr.s(auto_attribs=True)
+class DQNSettings(HyperparamSettings):
+    batch_size: int = 128
+    buffer_size: int = 50000
+    buffer_init_steps: int = 0
+    tau: float = 0.005
+    steps_per_update: float = 1
+    save_replay_buffer: bool = False
+    init_entcoef: float = 1.0
+    reward_signal_steps_per_update: float = attr.ib()
+
+    @reward_signal_steps_per_update.default
+    def _reward_signal_steps_per_update_default(self):
+        return self.steps_per_update
 
 # INTRINSIC REWARD SIGNALS #############################################################
 class RewardSignalType(Enum):
@@ -600,9 +648,16 @@ class SelfPlaySettings:
 class TrainerType(Enum):
     PPO: str = "ppo"
     SAC: str = "sac"
+    SACTRANSFER: str = "sac_transfer"
+    DQN: str = "dqn"
 
     def to_settings(self) -> type:
-        _mapping = {TrainerType.PPO: PPOSettings, TrainerType.SAC: SACSettings}
+        _mapping = {
+            TrainerType.PPO: PPOSettings, 
+            TrainerType.SAC: SACSettings,
+            TrainerType.SACTRANSFER: SACTransferSettings,
+            TrainerType.DQN: DQNSettings,
+            }
         return _mapping[self]
 
 

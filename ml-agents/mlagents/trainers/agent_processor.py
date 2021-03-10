@@ -98,7 +98,7 @@ class AgentProcessor:
         :param previous_action: The outputs of the Policy's get_action method.
         """
         take_action_outputs = previous_action.outputs
-        if take_action_outputs:
+        if take_action_outputs and "entropy" in take_action_outputs.keys():
             for _entropy in take_action_outputs["entropy"]:
                 self._stats_reporter.add_stat("Policy/Entropy", _entropy)
 
@@ -228,11 +228,14 @@ class AgentProcessor:
                 continuous=stored_actions.continuous[idx],
                 discrete=stored_actions.discrete[idx],
             )
-            stored_action_probs = stored_take_action_outputs["log_probs"]
-            log_probs_tuple = LogProbsTuple(
-                continuous=stored_action_probs.continuous[idx],
-                discrete=stored_action_probs.discrete[idx],
-            )
+            if "log_probs" in stored_take_action_outputs.keys():
+                stored_action_probs = stored_take_action_outputs["log_probs"]
+                log_probs_tuple = LogProbsTuple(
+                    continuous=stored_action_probs.continuous[idx],
+                    discrete=stored_action_probs.discrete[idx],
+                )
+            else:
+                log_probs_tuple = None
             action_mask = stored_decision_step.action_mask
             prev_action = self.policy.retrieve_previous_action([global_agent_id])[0, :]
 

@@ -8,6 +8,8 @@
 
 # Training environments
 /envs
+/builds
+/results
 
 # Environemnt logfile
 *Project.log

@@ -260,13 +260,13 @@ class Trajectory(NamedTuple):
             agent_buffer_trajectory[BufferKey.NEXT_DISC_ACTION].append(
                 disc_next_actions
             )
-
-            agent_buffer_trajectory[BufferKey.CONTINUOUS_LOG_PROBS].append(
-                exp.action_probs.continuous
-            )
-            agent_buffer_trajectory[BufferKey.DISCRETE_LOG_PROBS].append(
-                exp.action_probs.discrete
-            )
+            if BufferKey.CONTINUOUS_LOG_PROBS in agent_buffer_trajectory.keys():
+                agent_buffer_trajectory[BufferKey.CONTINUOUS_LOG_PROBS].append(
+                    exp.action_probs.continuous
+                )
+                agent_buffer_trajectory[BufferKey.DISCRETE_LOG_PROBS].append(
+                    exp.action_probs.discrete
+                )
 
             # Store action masks if necessary. Note that 1 means active, while
             # in AgentExperience False means active.

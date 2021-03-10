@@ -7,6 +7,8 @@ from mlagents.trainers.exception import TrainerConfigError
 from mlagents.trainers.trainer import Trainer
 from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.sac.trainer import SACTrainer
+from mlagents.trainers.sac_transfer.trainer import SACTransferTrainer
+from mlagents.trainers.dqn.trainer import DQNTrainer
 from mlagents.trainers.ghost.trainer import GhostTrainer
 from mlagents.trainers.ghost.controller import GhostController
 from mlagents.trainers.settings import TrainerSettings, TrainerType
@@ -124,6 +126,26 @@ class TrainerFactory:
             )
         elif trainer_type == TrainerType.SAC:
             trainer = SACTrainer(
+                brain_name,
+                min_lesson_length,
+                trainer_settings,
+                train_model,
+                load_model,
+                seed,
+                trainer_artifact_path,
+            )
+        elif trainer_type == TrainerType.SACTRANSFER:
+            trainer = SACTransferTrainer(
+                brain_name,
+                min_lesson_length,
+                trainer_settings,
+                train_model,
+                load_model,
+                seed,
+                trainer_artifact_path,
+            )
+        elif trainer_type == TrainerType.DQN:
+            trainer = DQNTrainer(
                 brain_name,
                 min_lesson_length,
                 trainer_settings,
