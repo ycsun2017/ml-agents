@@ -10,7 +10,7 @@ from mlagents.trainers.torch.action_log_probs import ActionLogProbs
 from mlagents.trainers.settings import NetworkSettings
 from mlagents.trainers.torch.utils import ModelUtils
 from mlagents.trainers.torch.decoders import ValueHeads
-from mlagents.trainers.torch.layers import LSTM, LinearEncoder, Initialization
+from mlagents.trainers.torch.layers import LSTM, LinearEncoder, Initialization, linear_layer, Swish
 from mlagents.trainers.torch.encoders import VectorInput
 from mlagents.trainers.buffer import AgentBuffer
 from mlagents.trainers.trajectory import ObsUtil
@@ -28,6 +28,28 @@ EncoderFunction = Callable[
 
 EPSILON = 1e-7
 
+def create_mlp(input_size, output_size, num_layers, hidden_size, 
+    activation=Swish(), output_activation=nn.Identity()):
+    kernel_init = Initialization.KaimingHeNormal
+    kernel_gain = 1.0
+    
+    sizes = [input_size]
+    sizes += [hidden_size] * (num_layers-1)
+    sizes += [output_size]
+    print("total sizes", sizes)
+
+    layers = []
+    for j in range(len(sizes)-1):
+        act = activation if j < len(sizes)-2 else output_activation
+        layers += [
+            linear_layer(
+                sizes[j], 
+                sizes[j+1], 
+                kernel_init=kernel_init,
+                kernel_gain=kernel_gain
+            ), act
+        ]
+    return nn.Sequential(*layers)
 
 class NetworkBody(nn.Module):
     def __init__(
@@ -232,6 +254,38 @@ class ValueNetwork(nn.Module, Critic):
         output = self.value_heads(encoding)
         return output, memories
 
+class LatentEncoder(nn.Module):
+    def __init__(
+        self,
+        observation_specs: List[ObservationSpec],
+        network_settings: NetworkSettings,
+        encoded_act_size: int = 0,
+        feature_size: int = 64,
+    ):
+        super().__init__()
+        
+        self.network_body = NetworkBody(
+            observation_specs, 
+            network_settings,
+            encoded_act_size,
+        )
+
+        self.latent = create_mlp(network_settings.hidden_units, feature_size, 1, 0)
+
+    def forward(
+        self,
+        inputs: List[torch.Tensor],
+        actions: Optional[torch.Tensor] = None,
+        memories: Optional[torch.Tensor] = None,
+        sequence_length: int = 1,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        encoding, memories = self.network_body(
+            inputs, actions, memories, sequence_length
+        )
+        output = self.latent(encoding)
+        return output, memories
+
 class EncodedQNetwork(nn.Module):
     def __init__(
         self,
@@ -240,6 +294,7 @@ class EncodedQNetwork(nn.Module):
         observation_specs: List[ObservationSpec],
         network_settings: NetworkSettings,
         action_spec: ActionSpec,
+        feature_size: int = 64,
     ):
         super().__init__()
         num_value_outs = max(sum(action_spec.discrete_branches), 1)
@@ -252,14 +307,10 @@ class EncodedQNetwork(nn.Module):
         # )
         # self.encoder = encoder
 
-        if network_settings.memory is not None:
-            encoding_size = network_settings.memory.memory_size // 2
-        else:
-            encoding_size = network_settings.hidden_units
         # The Q network, our policy is based on the Q outputs
         self.q_head = ValueHeads(
             stream_names, 
-            encoding_size, 
+            feature_size, 
             num_value_outs
         )
 
@@ -278,60 +329,55 @@ class EncodedQNetwork(nn.Module):
         output = self.q_head(encoding)
         return output, memories
 
+
 class DynamicModel(nn.Module):
     def __init__(
         self,
-        encoder,
-        network_settings: NetworkSettings,
-        action_spec: ActionSpec,
+        enc_size: int,
+        h_size: int,
+        num_layers: int
     ):
         super().__init__()
 
-        self.encoder = encoder
-        self.h_size = network_settings.hidden_units
+        self.h_size = h_size
+        self.num_layers = num_layers
+        self.enc_size = enc_size
 
-        self.predict_state = LinearEncoder(
-            total_enc_size, network_settings.num_layers, self.h_size
+        self.predict_state = create_mlp(
+            self.enc_size + 1, 
+            self.enc_size, 
+            self.num_layers, 
+            self.h_size
         )
 
-        self.predict_reward = LinearEncoder(
-            total_enc_size, network_settings.num_layers, self.h_size
+        self.predict_reward = create_mlp(
+            self.enc_size + 1, 
+            1, 
+            self.num_layers, 
+            self.h_size
         )
-
-        self.layers = [
-            linear_layer(
-                input_size,
-                hidden_size,
-                kernel_init=kernel_init,
-                kernel_gain=kernel_gain,
-            )
-        ]
-        self.layers.append(Swish())
-        for _ in range(num_layers - 1):
-            self.layers.append(
-                linear_layer(
-                    hidden_size,
-                    hidden_size,
-                    kernel_init=kernel_init,
-                    kernel_gain=kernel_gain,
-                )
-            )
-            self.layers.append(Swish())
-        self.seq_layers = torch.nn.Sequential(*self.layers)
 
     def forward(
         self,
+        encoder,
         inputs: List[torch.Tensor],
-        actions: Optional[torch.Tensor] = None,
+        actions: AgentAction,
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
 
-        encoding, memories = self.encoder(
-            inputs, actions, memories, sequence_length
+        cont_action = actions.continuous_tensor
+        dist_actions = torch.cat(actions.discrete_list)
+
+        encoding, _ = encoder(
+            inputs, cont_action, memories, sequence_length
         )
-        output = self.q_head(encoding)
-        return output, memories
+        
+        state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1)
+        
+        predict_next = self.predict_state(state_action)
+        predict_reward = self.predict_reward(state_action)
+        return predict_next, predict_reward
     
 
 class Actor(abc.ABC):

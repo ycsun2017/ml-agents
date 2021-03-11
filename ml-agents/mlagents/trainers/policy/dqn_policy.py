@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional, cast
 import numpy as np
 from mlagents.torch_utils import torch, default_device
 import copy
@@ -10,8 +10,8 @@ from mlagents.trainers.policy import Policy
 from mlagents_envs.base_env import DecisionSteps, BehaviorSpec
 from mlagents_envs.timers import timed
 
-from mlagents.trainers.settings import TrainerSettings, ScheduleType
-from mlagents.trainers.torch.networks import SimpleActor, SharedActorCritic, GlobalSteps, NetworkBody, EncodedQNetwork
+from mlagents.trainers.settings import TrainerSettings, ScheduleType, DQNSettings
+from mlagents.trainers.torch.networks import SimpleActor, SharedActorCritic, GlobalSteps, LatentEncoder, EncodedQNetwork, DynamicModel
 from mlagents.trainers.torch.decoders import ValueHeads
 from mlagents.trainers.torch.utils import ModelUtils
 from mlagents.trainers.buffer import AgentBuffer
@@ -69,19 +69,33 @@ class DQNPolicy(Policy):
         self.stream_names = list(self.reward_signals.keys())
         self.num_actions = sum(behavior_spec.action_spec.discrete_branches)
 
+        self.hyperparameters: DQNSettings = cast(
+            DQNSettings, trainer_settings.hyperparameters
+        )
+
         # The encoder
-        self.encoder = NetworkBody(
+        self.encoder = LatentEncoder(
             behavior_spec.observation_specs, 
             trainer_settings.network_settings,
             int(behavior_spec.action_spec.continuous_size),
+            self.hyperparameters.feature_size
         )
 
+        # The Q net based on the encoder
         self.q_network = EncodedQNetwork(
             # self.encoder,
             self.stream_names,
             behavior_spec.observation_specs,
             trainer_settings.network_settings,
-            behavior_spec.action_spec
+            behavior_spec.action_spec,
+            self.hyperparameters.feature_size
+        )
+
+        # The dynamics model
+        self.model = DynamicModel(
+            self.hyperparameters.feature_size, 
+            trainer_settings.network_settings.hidden_units,
+            self.hyperparameters.forward_layers, 
         )
 
         # self.q_network = ValueNetwork(
@@ -93,6 +107,7 @@ class DQNPolicy(Policy):
         # )
         print("encoder\n", self.encoder)
         print("policy q net\n", self.q_network)
+        print("dynamics net\n", self.model)
 
         self.shared_critic = False
 

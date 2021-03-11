@@ -206,6 +206,14 @@ class DQNSettings(HyperparamSettings):
     init_entcoef: float = 1.0
     reward_signal_steps_per_update: float = attr.ib()
 
+    # Transfer
+    transfer_target: bool = False
+    transfer_from: str = ""
+
+    # Network
+    forward_layers: int = 2
+    feature_size: int = 64
+
     @reward_signal_steps_per_update.default
     def _reward_signal_steps_per_update_default(self):
         return self.steps_per_update

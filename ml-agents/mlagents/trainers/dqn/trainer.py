@@ -354,7 +354,13 @@ class DQNTrainer(RLTrainer):
         # self.model_saver.register(self.optimizer)
         # self.model_saver.initialize_or_load()
         if self.load:
-            self.initialize_or_load(load_q_head=False)
+            self.initialize_or_load()
+        elif self.hyperparameters.transfer_target:
+            self.initialize_or_load(
+                path=self.hyperparameters.transfer_from, 
+                load_encoder=False, 
+                load_q_head=False
+            )
 
         # Needed to resume loads properly
         self.step = policy.get_current_step()
@@ -379,27 +385,41 @@ class DQNTrainer(RLTrainer):
         models = {
             "encoder": self.policy.encoder.state_dict(),
             "q_head": self.policy.q_network.q_head.state_dict(),
+            "model": self.policy.model.state_dict()
         }
         torch.save(models, 
             os.path.join(model_path, "models.pt"))
         print("saved models")
 
-        for name, param in self.policy.encoder.named_parameters():
-            print("encoder", name, param)
+        for name, param in self.policy.model.named_parameters():
+            print("model", name, param)
     
-    def initialize_or_load(self, load_encoder=True, load_q_head=True) -> None:
+    def initialize_or_load(
+        self, 
+        path=None,
+        load_encoder=True, 
+        load_q_head=True, 
+        load_model=True
+    ) -> None:
         """
         Special saving method for DQN
         """
-        model_path = self.artifact_path
+        if path is None:
+            model_path = self.artifact_path
+        else:
+            model_path = path
+
+        print("loading model from", model_path)
         models = torch.load(os.path.join(model_path, "models.pt"))
 
         if load_encoder:
             self.policy.encoder.load_state_dict(models["encoder"])
         if load_q_head:
             self.policy.q_network.q_head.load_state_dict(models["q_head"])
-        print("loaded model")
+        if load_model:
+            self.policy.model.load_state_dict(models["model"])
+        
 
-        for name, param in self.policy.encoder.named_parameters():
-            print("encoder", name, param)
+        for name, param in self.policy.model.named_parameters():
+            print("model", name, param)
 
