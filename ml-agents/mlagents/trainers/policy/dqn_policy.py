@@ -118,7 +118,7 @@ class DQNPolicy(Policy):
 
         self.decay_epsilon = ModelUtils.DecayedValue(
             ScheduleType.LINEAR,
-            0.5,
+            1.0,
             0.05,
             self.trainer_settings.max_steps,
         )
