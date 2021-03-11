@@ -2,7 +2,7 @@ behaviors:
   PushBlock:
     trainer_type: dqn
     hyperparameters:
-      learning_rate: 0.0003
+      learning_rate: 0.0001
       learning_rate_schedule: constant
       batch_size: 256
       buffer_size: 50000
