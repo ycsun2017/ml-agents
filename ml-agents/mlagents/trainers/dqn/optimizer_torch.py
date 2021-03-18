@@ -362,6 +362,93 @@ class TorchDQNOptimizer(TorchOptimizer):
         }
 
         return update_stats
+    
+    @timed
+    def update_model(self, batch: AgentBuffer, num_sequences: int) -> Dict[str, float]:
+        """
+        Updates only dynamics model using buffer.
+        :param num_sequences: Number of trajectories in batch.
+        :param batch: Experience mini-batch.
+        :param update_target: Whether or not to update target value network
+        :param reward_signal_batches: Minibatches to use for updating the reward signals,
+            indexed by name. If none, don't update the reward signals.
+        :return: Output from update process.
+        """
+        rewards = {}
+        for name in self.reward_signals:
+            rewards[name] = ModelUtils.list_to_tensor(
+                batch[RewardSignalUtil.rewards_key(name)]
+            )
+
+        n_obs = len(self.policy.behavior_spec.observation_specs)
+        current_obs = ObsUtil.from_buffer(batch, n_obs)
+        # Convert to tensors
+        current_obs = [ModelUtils.list_to_tensor(obs) for obs in current_obs]
+
+        next_obs = ObsUtil.from_buffer_next(batch, n_obs)
+        # Convert to tensors
+        next_obs = [ModelUtils.list_to_tensor(obs) for obs in next_obs]
+
+        act_masks = ModelUtils.list_to_tensor(batch[BufferKey.ACTION_MASK])
+        actions = AgentAction.from_buffer(batch)
+
+        memories_list = [
+            ModelUtils.list_to_tensor(batch[BufferKey.MEMORY][i])
+            for i in range(0, len(batch[BufferKey.MEMORY]), self.policy.sequence_length)
+        ]
+        # LSTM shouldn't have sequence length <1, but stop it from going out of the index if true.
+        value_memories_list = [
+            ModelUtils.list_to_tensor(batch[BufferKey.CRITIC_MEMORY][i])
+            for i in range(
+                0, len(batch[BufferKey.CRITIC_MEMORY]), self.policy.sequence_length
+            )
+        ]
+        offset = 1 if self.policy.sequence_length > 1 else 0
+        next_value_memories_list = [
+            ModelUtils.list_to_tensor(
+                batch[BufferKey.CRITIC_MEMORY][i]
+            )  # only pass value part of memory to target network
+            for i in range(
+                offset, len(batch[BufferKey.CRITIC_MEMORY]), self.policy.sequence_length
+            )
+        ]
+
+        if len(memories_list) > 0:
+            memories = torch.stack(memories_list).unsqueeze(0)
+            value_memories = torch.stack(value_memories_list).unsqueeze(0)
+            next_value_memories = torch.stack(next_value_memories_list).unsqueeze(0)
+        else:
+            memories = None
+            value_memories = None
+            next_value_memories = None
+
+        # Q and V network memories are 0'ed out, since we don't have them during inference.
+        q_memories = (
+            torch.zeros_like(next_value_memories)
+            if next_value_memories is not None
+            else None
+        )
+
+        # update model based on the encoder
+        self.model_optimizer.zero_grad()
+        model_loss = self.model_loss(
+            current_obs, 
+            next_obs, 
+            actions, 
+            rewards["extrinsic"], 
+            memories=q_memories,
+            sequence_length=self.policy.sequence_length,
+        )
+        model_loss.backward()
+        self.model_optimizer.step()
+
+        # print("model loss", model_loss.item())
+
+        update_stats = {
+            "Losses/Model Loss": model_loss.item(),
+        }
+
+        return update_stats
 
     def update_reward_signals(
         self, reward_signal_minibatches: Mapping[str, AgentBuffer], num_sequences: int

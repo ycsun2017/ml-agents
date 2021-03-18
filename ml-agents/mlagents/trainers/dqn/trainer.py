@@ -268,6 +268,20 @@ class DQNTrainer(RLTrainer):
                     )
 
                 update_stats = self.optimizer.update(sampled_minibatch, n_sequences)
+                
+                if not self.hyperparameters.transfer_target:
+                    for i in range(5):
+                        sampled_minibatch = buffer.sample_mini_batch(
+                            self.hyperparameters.batch_size,
+                            sequence_length=self.policy.sequence_length,
+                        )
+                        # Get rewards for each reward
+                        for name, signal in self.optimizer.reward_signals.items():
+                            sampled_minibatch[RewardSignalUtil.rewards_key(name)] = (
+                                signal.evaluate(sampled_minibatch) * signal.strength
+                            )
+                        self.optimizer.update_model(sampled_minibatch, n_sequences)
+                
                 for stat_name, value in update_stats.items():
                     batch_update_stats[stat_name].append(value)
 
@@ -289,6 +303,7 @@ class DQNTrainer(RLTrainer):
                 int(self.hyperparameters.buffer_size * BUFFER_TRUNCATE_PERCENT)
             )
         return has_updated
+    
 
     def _update_reward_signals(self) -> None:
         """
