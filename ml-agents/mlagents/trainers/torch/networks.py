@@ -334,24 +334,26 @@ class DynamicModel(nn.Module):
     def __init__(
         self,
         enc_size: int,
+        num_actions: int,
         h_size: int,
         num_layers: int
     ):
         super().__init__()
 
         self.h_size = h_size
+        self.num_actions = num_actions
         self.num_layers = num_layers
         self.enc_size = enc_size
 
         self.predict_state = create_mlp(
-            self.enc_size + 1, 
+            self.enc_size + self.num_actions, 
             self.enc_size, 
             self.num_layers, 
             self.h_size
         )
 
         self.predict_reward = create_mlp(
-            self.enc_size + 1, 
+            self.enc_size + self.num_actions, 
             1, 
             self.num_layers, 
             self.h_size
@@ -372,8 +374,10 @@ class DynamicModel(nn.Module):
         encoding, _ = encoder(
             inputs, cont_action, memories, sequence_length
         )
-        
-        state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1)
+        # print("actions", dist_actions)
+        onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
+        # print("onehot", onehot)
+        state_action = torch.cat((encoding, onehot), dim=1)
         
         predict_next = self.predict_state(state_action)
         predict_reward = self.predict_reward(state_action)
