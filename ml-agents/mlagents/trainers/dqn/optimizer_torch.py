@@ -145,7 +145,7 @@ class TorchDQNOptimizer(TorchOptimizer):
         actions,
         reward,
         memories,
-        sequence_length
+        sequence_length,
     ):
         encoded_next, _ = self.policy.encoder(
             obs,
@@ -158,7 +158,8 @@ class TorchDQNOptimizer(TorchOptimizer):
             obs,
             actions,
             memories,
-            sequence_length
+            sequence_length,
+            not self.hyperparameters.transfer_target
         )
         
         loss_fn = torch.nn.MSELoss()

@@ -385,6 +385,7 @@ class DynamicModel(nn.Module):
         actions: AgentAction,
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
+        no_grad_encoder: bool = True,
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
 
         cont_action = actions.continuous_tensor
@@ -393,11 +394,11 @@ class DynamicModel(nn.Module):
         encoding, _ = encoder(
             inputs, cont_action, memories, sequence_length
         )
-        # print("actions", dist_actions)
         onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
-        # print("onehot", onehot)
         state_action = torch.cat((encoding, onehot), dim=1)
-        
+#         state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1).detach()
+        if no_grad_encoder:
+            state_action = state_action.detach()
         predict_next = self.predict_state(state_action)
         predict_reward = self.predict_reward(state_action)
         return predict_next, predict_reward
