@@ -4,6 +4,8 @@ behaviors:
     hyperparameters:
       learning_rate: 0.0003
       learning_rate_schedule: constant
+      model_learning_rate: 0.0003
+      model_lr_schedule: constant
       batch_size: 512
       buffer_size: 3000000
       buffer_init_steps: 0

@@ -205,6 +205,8 @@ class DQNSettings(HyperparamSettings):
     save_replay_buffer: bool = False
     init_entcoef: float = 1.0
     reward_signal_steps_per_update: float = attr.ib()
+    model_learning_rate: float = 3.0e-4
+    model_lr_schedule: ScheduleType = ScheduleType.CONSTANT
 
     # Transfer
     transfer_target: bool = False

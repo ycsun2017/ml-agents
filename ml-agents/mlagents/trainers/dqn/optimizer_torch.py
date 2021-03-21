@@ -93,6 +93,13 @@ class TorchDQNOptimizer(TorchOptimizer):
             self.trainer_settings.max_steps,
         )
 
+        self.decay_model_lr = ModelUtils.DecayedValue(
+            self.hyperparameters.model_lr_schedule,
+            self.hyperparameters.model_learning_rate,
+            1e-10,
+            self.trainer_settings.max_steps,
+        )
+
         if not self.hyperparameters.transfer_target:
             # source task learning, train the encoder and q networks, and fit a model
             self.value_optimizer = torch.optim.Adam(
@@ -103,7 +110,7 @@ class TorchDQNOptimizer(TorchOptimizer):
 
             self.model_optimizer = torch.optim.Adam(
                 self.policy.model.parameters(), 
-                lr=self.hyperparameters.learning_rate
+                lr=self.hyperparameters.model_learning_rate
             )
         else:
             self.value_optimizer = torch.optim.Adam(
@@ -113,6 +120,15 @@ class TorchDQNOptimizer(TorchOptimizer):
             )
 
             self.model_optimizer = None
+            # self.value_optimizer = torch.optim.Adam(
+            #     self.q_network.parameters(), 
+            #     lr=self.hyperparameters.learning_rate
+            # )
+
+            # self.model_optimizer = torch.optim.Adam(
+            #     self.policy.encoder.parameters(), 
+            #     lr=self.hyperparameters.model_learning_rate
+            # )
 
         self._move_to_device(default_device())
 
@@ -289,6 +305,7 @@ class TorchDQNOptimizer(TorchOptimizer):
             cont_actions,
             memories=q_memories,
             sequence_length=self.policy.sequence_length,
+            no_grad_encoder=self.hyperparameters.transfer_target
         )
 
         if self._action_spec.discrete_size > 0:
@@ -308,21 +325,17 @@ class TorchDQNOptimizer(TorchOptimizer):
         masks = ModelUtils.list_to_tensor(batch[BufferKey.MASKS], dtype=torch.bool)
         dones = ModelUtils.list_to_tensor(batch[BufferKey.DONE])
 
-        q_loss = self.dqn_q_loss(
-            q_stream, target_values, dones, rewards, masks
-        )
-
-        # if self.step % 10 == 0:
-        #     print("action", disc_actions[:10])
-        #     print("q str", q_stream["extrinsic"][:10])
-        #     print("q loss", q_loss.item())
-        #     self.step += 1
-            
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
         ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
 
         if not self.hyperparameters.transfer_target:
+            decay_model_lr = self.decay_model_lr.get_value(self.policy.get_current_step())
+            ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
+
             self.value_optimizer.zero_grad()
+            q_loss = self.dqn_q_loss(
+                q_stream, target_values, dones, rewards, masks
+            )
             q_loss.backward()
             self.value_optimizer.step()
 
@@ -342,6 +355,9 @@ class TorchDQNOptimizer(TorchOptimizer):
         else:
             # target task, train with model loss
             self.value_optimizer.zero_grad()
+            q_loss = self.dqn_q_loss(
+                q_stream, target_values, dones, rewards, masks
+            )
             model_loss = self.model_loss(
                 current_obs, 
                 next_obs, 
@@ -352,6 +368,29 @@ class TorchDQNOptimizer(TorchOptimizer):
             )
             (q_loss + 0.5 * model_loss).backward()
             self.value_optimizer.step()
+
+            # decay_model_lr = self.decay_model_lr.get_value(self.policy.get_current_step())
+            # ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
+            # torch.autograd.set_detect_anomaly(True)
+            # # update encoder based on the model
+            # self.model_optimizer.zero_grad()
+            # model_loss = self.model_loss(
+            #     current_obs, 
+            #     next_obs, 
+            #     actions, 
+            #     rewards["extrinsic"], 
+            #     memories=q_memories,
+            #     sequence_length=self.policy.sequence_length,
+            # )
+            # model_loss.backward()
+            # self.model_optimizer.step()
+
+            # self.value_optimizer.zero_grad()
+            # q_loss = self.dqn_q_loss(
+            #     q_stream, target_values, dones, rewards, masks
+            # )
+            # q_loss.backward()
+            # self.value_optimizer.step()
 
         # Update target network
         ModelUtils.soft_update(self.q_network, self.target_network, self.tau)

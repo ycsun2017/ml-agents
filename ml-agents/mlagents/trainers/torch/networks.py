@@ -254,6 +254,10 @@ class ValueNetwork(nn.Module, Critic):
         output = self.value_heads(encoding)
         return output, memories
 
+class L2Norm(nn.Module):
+    def forward(self, x):
+        return x / x.norm(p=2, dim=1, keepdim=True)
+
 class LatentEncoder(nn.Module):
     def __init__(
         self,
@@ -270,7 +274,19 @@ class LatentEncoder(nn.Module):
             encoded_act_size,
         )
 
-        self.latent = create_mlp(network_settings.hidden_units, feature_size, 1, 0)
+        # self.latent = create_mlp(network_settings.hidden_units, feature_size, 1, 0)
+
+        layers = [
+            linear_layer(
+                network_settings.hidden_units, 
+                feature_size, 
+                kernel_init=Initialization.KaimingHeNormal,
+                kernel_gain=1.0
+            ), 
+            L2Norm()
+        ]
+        self.latent = nn.Sequential(*layers)
+
 
     def forward(
         self,
@@ -321,11 +337,14 @@ class EncodedQNetwork(nn.Module):
         actions: Optional[torch.Tensor] = None,
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
+        no_grad_encoder: bool = False
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
 
         encoding, memories = encoder(
             inputs, actions, memories, sequence_length
         )
+        if no_grad_encoder:
+            encoding = encoding.detach()
         output = self.q_head(encoding)
         return output, memories
 
