@@ -375,7 +375,7 @@ class DynamicModel(nn.Module):
             inputs, cont_action, memories, sequence_length
         )
         onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
-        state_action = torch.cat((encoding, onehot), dim=1).detach()
+        state_action = torch.cat((encoding, onehot), dim=1)
 #         state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1).detach()
         
         predict_next = self.predict_state(state_action)

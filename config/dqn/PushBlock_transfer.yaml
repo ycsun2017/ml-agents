@@ -15,7 +15,7 @@ behaviors:
       feature_size: 256
       forward_layers: 3
       transfer_target: true
-      transfer_from: "results/pushblock_largebuf/PushBlock"
+      transfer_from: "results/pushblock_0/PushBlock"
     network_settings:
       normalize: false
       hidden_units: 256
