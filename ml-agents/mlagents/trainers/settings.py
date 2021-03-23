@@ -211,6 +211,7 @@ class DQNSettings(HyperparamSettings):
     # Transfer
     transfer_target: bool = False
     transfer_from: str = ""
+    detach_next: bool = False
 
     # Network
     forward_layers: int = 2

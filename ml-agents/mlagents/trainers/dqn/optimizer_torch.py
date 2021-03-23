@@ -168,7 +168,8 @@ class TorchDQNOptimizer(TorchOptimizer):
         # print("pred next", predict_next)
         # print("rew", reward)
         # print("pred rew", predict_reward.squeeze())
-
+        if self.hyperparameters.detach_next:
+            encoded_next = encoded_next.detach()
         model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
 
         return model_loss

@@ -4,7 +4,7 @@ behaviors:
     hyperparameters:
       learning_rate: 0.0003
       learning_rate_schedule: linear
-      model_learning_rate: 0.003
+      model_learning_rate: 0.0003
       model_lr_schedule: linear
       batch_size: 256
       buffer_size: 50000
@@ -16,7 +16,7 @@ behaviors:
       reward_signal_steps_per_update: 10.0
       feature_size: 16
       transfer_target: true
-      transfer_from: "results/basic_dqn_onehot/Basic"
+      transfer_from: "results/basic_onehot_1/Basic"
     network_settings:
       normalize: false
       hidden_units: 20
