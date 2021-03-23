@@ -355,7 +355,8 @@ class DynamicModel(nn.Module):
         enc_size: int,
         num_actions: int,
         h_size: int,
-        num_layers: int
+        num_layers: int,
+        onehot_action: bool = True
     ):
         super().__init__()
 
@@ -363,6 +364,8 @@ class DynamicModel(nn.Module):
         self.num_actions = num_actions
         self.num_layers = num_layers
         self.enc_size = enc_size
+        if not onehot_action:
+            self.num_actions = 1
 
         self.predict_state = create_mlp(
             self.enc_size + self.num_actions, 
@@ -394,9 +397,12 @@ class DynamicModel(nn.Module):
         encoding, _ = encoder(
             inputs, cont_action, memories, sequence_length
         )
-        onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
-        state_action = torch.cat((encoding, onehot), dim=1)
-#         state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1).detach()
+        if self.num_actions > 1:
+            onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
+            state_action = torch.cat((encoding, onehot), dim=1)
+        else:
+            state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1)
+            
         if no_grad_encoder:
             state_action = state_action.detach()
         predict_next = self.predict_state(state_action)
