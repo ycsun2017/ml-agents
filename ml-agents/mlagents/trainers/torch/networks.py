@@ -211,7 +211,6 @@ class ValueNetwork(nn.Module, Critic):
         encoded_act_size: int = 0,
         outputs_per_stream: int = 1,
     ):
-
         # This is not a typo, we want to call __init__ of nn.Module
         nn.Module.__init__(self)
         self.network_body = NetworkBody(
@@ -254,6 +253,64 @@ class ValueNetwork(nn.Module, Critic):
         output = self.value_heads(encoding)
         return output, memories
 
+class EncodedValueNetwork(nn.Module, Critic):
+    def __init__(
+        self,
+        # encoder,
+        stream_names: List[str],
+        observation_specs: List[ObservationSpec],
+        network_settings: NetworkSettings,
+        encoded_act_size: int = 0,
+        outputs_per_stream: int = 1,
+        feature_size: int = 64,
+    ):
+        # This is not a typo, we want to call __init__ of nn.Module
+        nn.Module.__init__(self)
+        
+        self.encoder = LatentEncoder(
+            observation_specs, 
+            network_settings,
+            0,
+            feature_size
+        )
+
+        self.value_heads = ValueHeads(stream_names, feature_size, outputs_per_stream)
+
+    def update_normalization(self, buffer: AgentBuffer) -> None:
+        self.encoder.network_body.update_normalization(buffer)
+
+    @property
+    def memory_size(self) -> int:
+        return self.encoder.network_body.memory_size
+    
+    def critic_pass(
+        self,
+        inputs: List[torch.Tensor],
+        memories: Optional[torch.Tensor] = None,
+        sequence_length: int = 1,
+        no_grad_encoder: bool = False
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        value_outputs, critic_mem_out = self.forward(
+            inputs, memories=memories, sequence_length=sequence_length, no_grad_encoder=no_grad_encoder
+        )
+        return value_outputs, critic_mem_out
+
+    def forward(
+        self,
+        inputs: List[torch.Tensor],
+        actions: Optional[torch.Tensor] = None,
+        memories: Optional[torch.Tensor] = None,
+        sequence_length: int = 1,
+        no_grad_encoder: bool = False
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        encoding, memories = self.encoder(
+            inputs, actions, memories, sequence_length
+        )
+        if no_grad_encoder:
+            encoding = encoding.detach()
+        output = self.value_heads(encoding)
+        return output, memories
+
 class L2Norm(nn.Module):
     def forward(self, x):
         return x / x.norm(p=2, dim=1, keepdim=True)
@@ -282,8 +339,7 @@ class LatentEncoder(nn.Module):
                 feature_size, 
                 kernel_init=Initialization.KaimingHeNormal,
                 kernel_gain=1.0
-            ), 
-            L2Norm()
+            )
         ]
         self.latent = nn.Sequential(*layers)
 
@@ -386,6 +442,43 @@ class DynamicModel(nn.Module):
         encoder,
         inputs: List[torch.Tensor],
         actions: AgentAction,
+        is_dist: bool = True,
+        memories: Optional[torch.Tensor] = None,
+        sequence_length: int = 1,
+        no_grad_encoder: bool = True,
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+
+        if is_dist:
+            cont_action = actions.continuous_tensor
+            dist_actions = torch.cat(actions.discrete_list)
+
+            encoding, _ = encoder(
+                inputs, cont_action, memories, sequence_length
+            )
+            if self.num_actions > 1:
+                onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
+                state_action = torch.cat((encoding, onehot), dim=1)
+            else:
+                state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1)
+        else:
+            cont_action = actions.continuous_tensor
+            encoding, _ = encoder(
+                inputs, None, memories, sequence_length
+            )
+            state_action = torch.cat((encoding, cont_action), dim=1)
+
+        if no_grad_encoder:
+            state_action = state_action.detach()
+        predict_next = self.predict_state(state_action)
+        predict_reward = self.predict_reward(state_action)
+        return predict_next, predict_reward
+    
+    def cont_forward(
+        self,
+        encoder,
+        inputs: List[torch.Tensor],
+        actions: AgentAction,
+        is_dist: bool = True,
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
         no_grad_encoder: bool = True,
@@ -400,15 +493,16 @@ class DynamicModel(nn.Module):
         if self.num_actions > 1:
             onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
             state_action = torch.cat((encoding, onehot), dim=1)
-        else:
+        elif self.num_actions == 1:
             state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1)
+        else:
+            state_action = encoding
             
         if no_grad_encoder:
             state_action = state_action.detach()
         predict_next = self.predict_state(state_action)
         predict_reward = self.predict_reward(state_action)
         return predict_next, predict_reward
-    
 
 class Actor(abc.ABC):
     @abc.abstractmethod

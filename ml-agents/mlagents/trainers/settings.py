@@ -171,10 +171,13 @@ class SACTransferSettings(HyperparamSettings):
     save_replay_buffer: bool = False
     init_entcoef: float = 1.0
     reward_signal_steps_per_update: float = attr.ib()
+    model_learning_rate: float = 3.0e-4
+    model_lr_schedule: ScheduleType = ScheduleType.CONSTANT
 
     # Transfer
-    use_transfer: bool = False
-    transfer_path: str = ""
+    transfer_target: bool = False
+    transfer_from: str = ""
+    detach_next: bool = False
     load_model: bool = True
     load_value: bool = False
     load_policy: bool = False
@@ -186,8 +189,7 @@ class SACTransferSettings(HyperparamSettings):
     action_layers: int = -1
     policy_layers: int = 1
     value_layers: int = 1
-    forward_layers: int = 1
-    inverse_layers: int = 1
+    forward_layers: int = 2
     feature_size: int = 64
     action_feature_size: int = 16
 

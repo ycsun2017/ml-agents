@@ -6,7 +6,7 @@ from mlagents_envs.logging_util import get_logger
 from mlagents.trainers.optimizer.torch_optimizer import TorchOptimizer
 from mlagents.trainers.policy.torch_policy import TorchPolicy
 from mlagents.trainers.settings import NetworkSettings
-from mlagents.trainers.torch.networks import ValueNetwork
+from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
 from mlagents.trainers.torch.utils import ModelUtils
@@ -50,8 +50,6 @@ class TorchSACTransferOptimizer(TorchOptimizer):
                 num_action_ins,
                 num_value_outs,
             )
-            print("q1", self.q1_network)
-            print("q2", self.q2_network)
 
         def forward(
             self,
@@ -113,13 +111,19 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         reward_signal_names = [key.value for key, _ in reward_signal_configs.items()]
         if policy.shared_critic:
             raise UnityTrainerException("SAC does not support SharedActorCritic")
-        self._critic = ValueNetwork(
+        
+        hyperparameters: SACTransferSettings = cast(SACTransferSettings, trainer_params.hyperparameters)
+        self.hyperparameters = hyperparameters
+
+        # Use the encoder in value networks
+        self._critic = EncodedValueNetwork(
+            # self.policy.encoder,
             reward_signal_names,
             policy.behavior_spec.observation_specs,
             policy.network_settings,
+            feature_size = hyperparameters.feature_size
         )
 
-        hyperparameters: SACTransferSettings = cast(SACTransferSettings, trainer_params.hyperparameters)
         self.tau = hyperparameters.tau
         self.init_entcoef = hyperparameters.init_entcoef
 
@@ -149,11 +153,18 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             self._action_spec,
         )
 
-        self.target_network = ValueNetwork(
-            self.stream_names,
-            self.policy.behavior_spec.observation_specs,
-            policy_network_settings,
+        self.target_network = EncodedValueNetwork(
+            # self.policy.encoder,
+            reward_signal_names,
+            policy.behavior_spec.observation_specs,
+            policy.network_settings,
+            feature_size = hyperparameters.feature_size
         )
+        print("---critic----")
+        print(self._critic)
+        print("---target----")
+        print(self.target_network)
+
         ModelUtils.soft_update(self._critic, self.target_network, 1.0)
 
         # We create one entropy coefficient per action, whether discrete or continuous.
@@ -184,9 +195,14 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             continuous=_cont_target, discrete=_disc_target
         )
         policy_params = list(self.policy.actor.parameters())
+        model_params = list(self.policy.model.parameters())
         value_params = list(self.q_network.parameters()) + list(
             self._critic.parameters()
         )
+        encoder_params = list(self._critic.encoder.parameters())
+
+        # for name, params in self._critic.named_parameters():
+        #     print("critic params", name, params)
 
         logger.debug("value_vars")
         for param in value_params:
@@ -201,12 +217,33 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             1e-10,
             self.trainer_settings.max_steps,
         )
+        self.decay_model_learning_rate = ModelUtils.DecayedValue(
+            hyperparameters.model_lr_schedule,
+            hyperparameters.model_learning_rate,
+            1e-10,
+            self.trainer_settings.max_steps,
+        )
+
         self.policy_optimizer = torch.optim.Adam(
             policy_params, lr=hyperparameters.learning_rate
         )
-        self.value_optimizer = torch.optim.Adam(
-            value_params, lr=hyperparameters.learning_rate
-        )
+        
+        if not self.hyperparameters.transfer_target:
+            # source task learning, train the encoder and q networks, and fit a model
+            self.value_optimizer = torch.optim.Adam(
+                value_params, lr=hyperparameters.learning_rate
+            ) 
+            self.model_optimizer = torch.optim.Adam(
+                model_params, lr=hyperparameters.model_learning_rate
+            ) 
+        else:
+            self.value_optimizer = torch.optim.Adam(
+                value_params, lr=hyperparameters.learning_rate
+            )  
+            self.model_optimizer = torch.optim.Adam(
+                model_params, lr=hyperparameters.model_learning_rate
+            ) 
+
         self.entropy_optimizer = torch.optim.Adam(
             self._log_ent_coef.parameters(), lr=hyperparameters.learning_rate
         )
@@ -437,6 +474,43 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             )
 
         return entropy_loss
+    
+    def sac_model_loss(
+        self,
+        obs,
+        next_obs,
+        actions,
+        reward,
+        memories,
+        sequence_length,
+    )-> torch.Tensor:
+        
+        encoded_next, _ = self.critic.encoder(
+            obs,
+            None, 
+            memories,
+            sequence_length
+        )
+        predict_next, predict_reward = self.policy.model(
+            self.critic.encoder,
+            obs,
+            actions,
+            memories,
+            sequence_length,
+            not self.hyperparameters.transfer_target
+        )
+        
+        loss_fn = torch.nn.MSELoss()
+
+        # print("encoded next", encoded_next)
+        # print("pred next", predict_next)
+        # print("rew", reward)
+        # print("pred rew", predict_reward.squeeze())
+        if not self.hyperparameters.transfer_target or self.hyperparameters.detach_next:
+            encoded_next = encoded_next.detach()
+        model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
+
+        return model_loss
 
     def _condense_q_streams(
         self, q_output: Dict[str, torch.Tensor], discrete_actions: torch.Tensor
@@ -532,10 +606,13 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         self.q_network.q2_network.network_body.copy_normalization(
             self.policy.actor.network_body
         )
-        self.target_network.network_body.copy_normalization(
+        self._critic.encoder.network_body.copy_normalization(
             self.policy.actor.network_body
         )
-        self._critic.network_body.copy_normalization(self.policy.actor.network_body)
+        self.target_network.encoder.network_body.copy_normalization(
+            self.policy.actor.network_body
+        )
+
         sampled_actions, log_probs, _, _, = self.policy.actor.get_action_and_stats(
             current_obs,
             masks=act_masks,
@@ -592,6 +669,15 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             policy_loss += value_loss
         else:
             total_value_loss += value_loss
+        
+        model_loss = self.sac_model_loss(
+            current_obs, 
+            next_obs, 
+            actions, 
+            rewards["extrinsic"], 
+            memories=value_memories,
+            sequence_length=self.policy.sequence_length,
+        )
 
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
         ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr)
@@ -599,21 +685,37 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         policy_loss.backward()
         self.policy_optimizer.step()
 
-        ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
-        self.value_optimizer.zero_grad()
-        total_value_loss.backward()
-        self.value_optimizer.step()
+        if not self.hyperparameters.transfer_target:
+            ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
+            self.value_optimizer.zero_grad()
+            total_value_loss.backward()
+            self.value_optimizer.step()
+
+            decay_model_lr = self.decay_model_learning_rate.get_value(self.policy.get_current_step())
+            ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
+            self.model_optimizer.zero_grad()
+            model_loss.backward()
+            self.model_optimizer.step()
+        
+        else:
+            ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
+            self.value_optimizer.zero_grad()
+            (total_value_loss + 0.5 * model_loss).backward()
+            self.value_optimizer.step()
 
         ModelUtils.update_learning_rate(self.entropy_optimizer, decay_lr)
         self.entropy_optimizer.zero_grad()
         entropy_loss.backward()
         self.entropy_optimizer.step()
 
+        
+
         # Update target network
         ModelUtils.soft_update(self._critic, self.target_network, self.tau)
         update_stats = {
             "Losses/Policy Loss": policy_loss.item(),
             "Losses/Value Loss": value_loss.item(),
+            "Losses/Model Loss": model_loss.item(),
             "Losses/Q1 Loss": q1_loss.item(),
             "Losses/Q2 Loss": q2_loss.item(),
             "Policy/Discrete Entropy Coeff": torch.mean(

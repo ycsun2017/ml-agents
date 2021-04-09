@@ -8,6 +8,7 @@ import os
 
 import numpy as np
 from mlagents.trainers.policy.checkpoint_manager import ModelCheckpoint
+from mlagents.torch_utils import torch
 
 from mlagents_envs.logging_util import get_logger
 from mlagents_envs.timers import timed
@@ -15,7 +16,7 @@ from mlagents_envs.base_env import BehaviorSpec
 from mlagents.trainers.buffer import BufferKey, RewardSignalUtil
 from mlagents.trainers.policy import Policy
 from mlagents.trainers.trainer.rl_trainer import RLTrainer
-from mlagents.trainers.policy.torch_policy import TorchPolicy
+from mlagents.trainers.policy.transfer_policy import TransferPolicy
 from mlagents.trainers.sac_transfer.optimizer_torch import TorchSACTransferOptimizer
 from mlagents.trainers.trajectory import Trajectory, ObsUtil
 from mlagents.trainers.behavior_id_utils import BehaviorIdentifiers
@@ -88,6 +89,7 @@ class SACTransferTrainer(RLTrainer):
         Overrides the default to save the replay buffer.
         """
         ckpt = super()._checkpoint()
+        self.save_model_transfer()
         if self.checkpoint_replay_buffer:
             self.save_replay_buffer()
         return ckpt
@@ -100,6 +102,7 @@ class SACTransferTrainer(RLTrainer):
         super().save_model()
         if self.checkpoint_replay_buffer:
             self.save_replay_buffer()
+        self.save_model_transfer(verbose=True)
 
     def save_replay_buffer(self) -> None:
         """
@@ -222,14 +225,14 @@ class SACTransferTrainer(RLTrainer):
 
     def create_torch_policy(
         self, parsed_behavior_id: BehaviorIdentifiers, behavior_spec: BehaviorSpec
-    ) -> TorchPolicy:
+    ) -> TransferPolicy:
         """
         Creates a policy with a PyTorch backend and SAC hyperparameters
         :param parsed_behavior_id:
         :param behavior_spec: specifications for policy construction
         :return policy
         """
-        policy = TorchPolicy(
+        policy = TransferPolicy(
             self.seed,
             behavior_spec,
             self.trainer_settings,
@@ -289,6 +292,10 @@ class SACTransferTrainer(RLTrainer):
             self.update_buffer.truncate(
                 int(self.hyperparameters.buffer_size * BUFFER_TRUNCATE_PERCENT)
             )
+        
+        # for name, param in self.policy.encoder.named_parameters():
+        #     print("encoder", name, param)
+
         return has_updated
 
     def _update_reward_signals(self) -> None:
@@ -330,7 +337,7 @@ class SACTransferTrainer(RLTrainer):
 
     def create_sac_optimizer(self) -> TorchSACTransferOptimizer:
         return TorchSACTransferOptimizer(  # type: ignore
-            cast(TorchPolicy, self.policy), self.trainer_settings  # type: ignore
+            cast(TransferPolicy, self.policy), self.trainer_settings  # type: ignore
         )  # type: ignore
 
     def add_policy(
@@ -356,6 +363,13 @@ class SACTransferTrainer(RLTrainer):
         self.model_saver.register(self.optimizer)
         self.model_saver.initialize_or_load()
 
+        if self.hyperparameters.transfer_target:
+            self.initialize_or_load(
+                path=self.hyperparameters.transfer_from, 
+                load_encoder=False, 
+                load_value_heads=False
+            )
+
         # Needed to resume loads properly
         self.step = policy.get_current_step()
         # Assume steps were updated at the correct ratio before
@@ -371,3 +385,49 @@ class SACTransferTrainer(RLTrainer):
         """
 
         return self.policy
+
+    def save_model_transfer(self, verbose=False) -> None:
+        """
+        Special saving method for DQN
+        """
+        model_path = self.artifact_path
+        models = {
+            "encoder": self.optimizer.critic.encoder.state_dict(),
+            "value_heads": self.optimizer.critic.value_heads.state_dict(),
+            "model": self.policy.model.state_dict()
+        }
+        torch.save(models, 
+            os.path.join(model_path, "models.pt"))
+        print("saved models")
+
+        if verbose:
+            for name, param in self.policy.model.named_parameters():
+                print("model", name, param)
+    
+    def initialize_or_load(
+        self, 
+        path=None,
+        load_encoder=True, 
+        load_value_heads=True, 
+        load_model=True
+    ) -> None:
+        """
+        Special saving method for DQN
+        """
+        if path is None:
+            model_path = self.artifact_path
+        else:
+            model_path = path
+
+        print("loading model from", model_path)
+        models = torch.load(os.path.join(model_path, "models.pt"))
+
+        if load_encoder:
+            self.optimizer.critic.encoder.load_state_dict(models["encoder"])
+        if load_value_heads:
+            self.optimizer.critic.value_heads.load_state_dict(models["value_heads"])
+        if load_model:
+            self.policy.model.load_state_dict(models["model"])
+        
+        for name, param in self.policy.model.named_parameters():
+            print("model", name, param)
