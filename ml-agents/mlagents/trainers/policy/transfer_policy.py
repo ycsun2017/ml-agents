@@ -31,6 +31,7 @@ class TransferPolicy(TorchPolicy):
         reparameterize: bool = False,
         separate_critic: bool = True,
         condition_sigma_on_obs: bool = True,
+        det_action: bool = False,
     ):
         """
         Policy that uses a multilayer perceptron to map the observations to actions. Could
@@ -67,6 +68,7 @@ class TransferPolicy(TorchPolicy):
             SACTransferSettings, trainer_settings.hyperparameters
         )
 
+        self.det_action = det_action
         # The encoder
         # self.encoder = LatentEncoder(
         #     behavior_spec.observation_specs, 
@@ -95,6 +97,7 @@ class TransferPolicy(TorchPolicy):
                 action_spec=behavior_spec.action_spec,
                 conditional_sigma=self.condition_sigma_on_obs,
                 tanh_squash=tanh_squash,
+                det_action=self.det_action
             )
             self.shared_critic = False
         else:
@@ -164,10 +167,16 @@ class TransferPolicy(TorchPolicy):
         :param seq_len: Sequence length when using RNN.
         :return: Tuple of AgentAction, ActionLogProbs, entropies, and output memories.
         """
-        actions, log_probs, entropies, memories = self.actor.get_action_and_stats(
-            obs, masks, memories, seq_len
-        )
-        return (actions, log_probs, entropies, memories)
+        if self.det_action:
+            actions =  self.actor.get_action_and_stats(
+                obs, masks, memories, seq_len
+            )
+            return actions
+        else:
+            actions, log_probs, entropies, memories = self.actor.get_action_and_stats(
+                obs, masks, memories, seq_len
+            )
+            return (actions, log_probs, entropies, memories)
 
     def evaluate_actions(
         self,
@@ -201,21 +210,36 @@ class TransferPolicy(TorchPolicy):
         )
 
         run_out = {}
-        with torch.no_grad():
-            action, log_probs, entropy, memories = self.sample_actions(
-                tensor_obs, masks=masks, memories=memories
-            )
-        action_tuple = action.to_action_tuple()
-        run_out["action"] = action_tuple
-        # This is the clipped action which is not saved to the buffer
-        # but is exclusively sent to the environment.
-        env_action_tuple = action.to_action_tuple(clip=self._clip_action)
-        run_out["env_action"] = env_action_tuple
-        run_out["log_probs"] = log_probs.to_log_probs_tuple()
-        run_out["entropy"] = ModelUtils.to_numpy(entropy)
-        run_out["learning_rate"] = 0.0
-        if self.use_recurrent:
-            run_out["memory_out"] = ModelUtils.to_numpy(memories).squeeze(0)
+        if self.det_action:
+            with torch.no_grad():
+                action = self.sample_actions(
+                    tensor_obs, masks=masks, memories=memories
+                )
+            action_tuple = action.to_action_tuple()
+            run_out["action"] = action_tuple
+            # This is the clipped action which is not saved to the buffer
+            # but is exclusively sent to the environment.
+            env_action_tuple = action.to_action_tuple(clip=self._clip_action)
+            run_out["env_action"] = env_action_tuple
+            run_out["learning_rate"] = 0.0
+            if self.use_recurrent:
+                run_out["memory_out"] = ModelUtils.to_numpy(memories).squeeze(0)
+        else:
+            with torch.no_grad():
+                action, log_probs, entropy, memories = self.sample_actions(
+                    tensor_obs, masks=masks, memories=memories
+                )
+            action_tuple = action.to_action_tuple()
+            run_out["action"] = action_tuple
+            # This is the clipped action which is not saved to the buffer
+            # but is exclusively sent to the environment.
+            env_action_tuple = action.to_action_tuple(clip=self._clip_action)
+            run_out["env_action"] = env_action_tuple
+            run_out["log_probs"] = log_probs.to_log_probs_tuple()
+            run_out["entropy"] = ModelUtils.to_numpy(entropy)
+            run_out["learning_rate"] = 0.0
+            if self.use_recurrent:
+                run_out["memory_out"] = ModelUtils.to_numpy(memories).squeeze(0)
         return run_out
 
     def get_action(

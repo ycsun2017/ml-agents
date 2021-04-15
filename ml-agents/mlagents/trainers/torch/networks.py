@@ -4,7 +4,7 @@ import abc
 from mlagents.torch_utils import torch, nn
 
 from mlagents_envs.base_env import ActionSpec, ObservationSpec
-from mlagents.trainers.torch.action_model import ActionModel
+from mlagents.trainers.torch.action_model import ActionModel, DetActionModel
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
 from mlagents.trainers.settings import NetworkSettings
@@ -260,7 +260,7 @@ class EncodedValueNetwork(nn.Module, Critic):
         stream_names: List[str],
         observation_specs: List[ObservationSpec],
         network_settings: NetworkSettings,
-        encoded_act_size: int = 0,
+        act_size: int = 0,
         outputs_per_stream: int = 1,
         feature_size: int = 64,
     ):
@@ -273,8 +273,8 @@ class EncodedValueNetwork(nn.Module, Critic):
             0,
             feature_size
         )
-
-        self.value_heads = ValueHeads(stream_names, feature_size, outputs_per_stream)
+        self.act_size = act_size
+        self.value_heads = ValueHeads(stream_names, feature_size+act_size, outputs_per_stream)
 
     def update_normalization(self, buffer: AgentBuffer) -> None:
         self.encoder.network_body.update_normalization(buffer)
@@ -294,6 +294,23 @@ class EncodedValueNetwork(nn.Module, Critic):
             inputs, memories=memories, sequence_length=sequence_length, no_grad_encoder=no_grad_encoder
         )
         return value_outputs, critic_mem_out
+    
+    def q_pass(
+        self,
+        inputs: List[torch.Tensor],
+        actions: Optional[torch.Tensor] = None,
+        memories: Optional[torch.Tensor] = None,
+        sequence_length: int = 1,
+        no_grad_encoder: bool = False
+    ) -> Tuple[Dict[str, torch.Tensor], torch.Tensor]:
+        encoding, memories = self.encoder(
+            inputs, None, memories, sequence_length
+        )
+        encoding = torch.cat([encoding, actions], dim=1)
+        if no_grad_encoder:
+            encoding = encoding.detach()
+        output = self.value_heads(encoding)
+        return output, memories
 
     def forward(
         self,
@@ -579,6 +596,7 @@ class SimpleActor(nn.Module, Actor):
         action_spec: ActionSpec,
         conditional_sigma: bool = False,
         tanh_squash: bool = False,
+        det_action: bool = False,
     ):
         super().__init__()
         self.action_spec = action_spec
@@ -612,13 +630,22 @@ class SimpleActor(nn.Module, Actor):
         self.memory_size_vector = torch.nn.Parameter(
             torch.Tensor([int(self.network_body.memory_size)]), requires_grad=False
         )
-
-        self.action_model = ActionModel(
-            self.encoding_size,
-            action_spec,
-            conditional_sigma=conditional_sigma,
-            tanh_squash=tanh_squash,
-        )
+        self.det_action = det_action
+        if self.det_action:
+            self.action_model = ActionModel(
+                self.encoding_size,
+                action_spec,
+                conditional_sigma=conditional_sigma,
+                tanh_squash=tanh_squash,
+                det_action=True
+            )
+        else:
+            self.action_model = ActionModel(
+                self.encoding_size,
+                action_spec,
+                conditional_sigma=conditional_sigma,
+                tanh_squash=tanh_squash,
+            )
 
     @property
     def memory_size(self) -> int:
@@ -638,8 +665,27 @@ class SimpleActor(nn.Module, Actor):
         encoding, memories = self.network_body(
             inputs, memories=memories, sequence_length=sequence_length
         )
-        action, log_probs, entropies = self.action_model(encoding, masks)
-        return action, log_probs, entropies, memories
+        if self.det_action:
+            action = self.action_model(encoding, masks)
+            # print("action", action)
+            return action
+        else:
+            action, log_probs, entropies = self.action_model(encoding, masks)
+            return action, log_probs, entropies, memories
+    
+    # def get_det_action(
+    #     self,
+    #     inputs: List[torch.Tensor],
+    #     masks: Optional[torch.Tensor] = None,
+    #     memories: Optional[torch.Tensor] = None,
+    #     sequence_length: int = 1,
+    # ) -> Tuple[AgentAction, ActionLogProbs, torch.Tensor, torch.Tensor]:
+
+    #     encoding, memories = self.network_body(
+    #         inputs, memories=memories, sequence_length=sequence_length
+    #     )
+    #     action = self.action_model.get_det_action(encoding)
+    #     return action
 
     def get_stats(
         self,

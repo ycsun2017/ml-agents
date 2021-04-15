@@ -224,6 +224,33 @@ class DQNSettings(HyperparamSettings):
     def _reward_signal_steps_per_update_default(self):
         return self.steps_per_update
 
+@attr.s(auto_attribs=True)
+class DDPGSettings(HyperparamSettings):
+    batch_size: int = 128
+    buffer_size: int = 50000
+    buffer_init_steps: int = 0
+    tau: float = 0.005
+    steps_per_update: float = 1
+    save_replay_buffer: bool = False
+    init_entcoef: float = 1.0
+    reward_signal_steps_per_update: float = attr.ib()
+    model_learning_rate: float = 3.0e-4
+    model_lr_schedule: ScheduleType = ScheduleType.CONSTANT
+
+    # Transfer
+    transfer_target: bool = False
+    transfer_from: str = ""
+    detach_next: bool = False
+
+    # Network
+    forward_layers: int = 2
+    feature_size: int = 64
+    onhot_action: bool = True
+
+    @reward_signal_steps_per_update.default
+    def _reward_signal_steps_per_update_default(self):
+        return self.steps_per_update
+
 # INTRINSIC REWARD SIGNALS #############################################################
 class RewardSignalType(Enum):
     EXTRINSIC: str = "extrinsic"
@@ -664,6 +691,7 @@ class TrainerType(Enum):
     SAC: str = "sac"
     SACTRANSFER: str = "sac_transfer"
     DQN: str = "dqn"
+    DDPG: str = "ddpg"
 
     def to_settings(self) -> type:
         _mapping = {
@@ -671,6 +699,7 @@ class TrainerType(Enum):
             TrainerType.SAC: SACSettings,
             TrainerType.SACTRANSFER: SACTransferSettings,
             TrainerType.DQN: DQNSettings,
+            TrainerType.DDPG: DDPGSettings,
             }
         return _mapping[self]
 

@@ -9,6 +9,7 @@ from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.sac.trainer import SACTrainer
 from mlagents.trainers.sac_transfer.trainer import SACTransferTrainer
 from mlagents.trainers.dqn.trainer import DQNTrainer
+from mlagents.trainers.ddpg.trainer import DDPGTrainer
 from mlagents.trainers.ghost.trainer import GhostTrainer
 from mlagents.trainers.ghost.controller import GhostController
 from mlagents.trainers.settings import TrainerSettings, TrainerType
@@ -146,6 +147,16 @@ class TrainerFactory:
             )
         elif trainer_type == TrainerType.DQN:
             trainer = DQNTrainer(
+                brain_name,
+                min_lesson_length,
+                trainer_settings,
+                train_model,
+                load_model,
+                seed,
+                trainer_artifact_path,
+            )
+        elif trainer_type == TrainerType.DDPG:
+            trainer = DDPGTrainer(
                 brain_name,
                 min_lesson_length,
                 trainer_settings,
