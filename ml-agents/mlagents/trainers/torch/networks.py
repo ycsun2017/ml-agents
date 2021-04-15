@@ -273,7 +273,7 @@ class EncodedValueNetwork(nn.Module, Critic):
             0,
             feature_size
         )
-
+        
         self.value_heads = ValueHeads(stream_names, feature_size, outputs_per_stream)
 
     def update_normalization(self, buffer: AgentBuffer) -> None:
@@ -334,12 +334,14 @@ class LatentEncoder(nn.Module):
         # self.latent = create_mlp(network_settings.hidden_units, feature_size, 1, 0)
 
         layers = [
+#             nn.BatchNorm1d(network_settings.hidden_units),
             linear_layer(
                 network_settings.hidden_units, 
                 feature_size, 
                 kernel_init=Initialization.KaimingHeNormal,
                 kernel_gain=1.0
-            )
+            ),
+            L2Norm()
         ]
         self.latent = nn.Sequential(*layers)
 
