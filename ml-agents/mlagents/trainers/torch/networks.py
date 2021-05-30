@@ -306,9 +306,9 @@ class EncodedValueNetwork(nn.Module, Critic):
         encoding, memories = self.encoder(
             inputs, None, memories, sequence_length
         )
-        encoding = torch.cat([encoding, actions], dim=1)
         if no_grad_encoder:
             encoding = encoding.detach()
+        encoding = torch.cat([encoding, actions], dim=1)
         output = self.value_heads(encoding)
         return output, memories
 
@@ -358,7 +358,7 @@ class LatentEncoder(nn.Module):
                 kernel_init=Initialization.KaimingHeNormal,
                 kernel_gain=1.0
             ),
-            L2Norm()
+            # L2Norm()
         ]
         self.latent = nn.Sequential(*layers)
 
@@ -634,7 +634,7 @@ class SimpleActor(nn.Module, Actor):
         )
         self.det_action = det_action
         if self.det_action:
-            self.action_model = ActionModel(
+            self.action_model = DetActionModel(
                 self.encoding_size,
                 action_spec,
                 conditional_sigma=conditional_sigma,

@@ -263,7 +263,7 @@ class DetActionModel(nn.Module):
         self._clip_action_on_export = not tanh_squash
     
     def forward(
-        self, inputs: torch.Tensor
+        self, inputs: torch.Tensor, masks: torch.Tensor
     ) -> Tuple[AgentAction]:
         """
         The forward method of this module. Outputs the action, log probs,

@@ -248,6 +248,7 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             self._log_ent_coef.parameters(), lr=hyperparameters.learning_rate
         )
         self._move_to_device(default_device())
+        self.total_steps = 0
 
     @property
     def critic(self):
@@ -544,6 +545,7 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             indexed by name. If none, don't update the reward signals.
         :return: Output from update process.
         """
+        self.total_steps += 1
         rewards = {}
         for name in self.reward_signals:
             rewards[name] = ModelUtils.list_to_tensor(
@@ -663,6 +665,9 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         )
         policy_loss = self.sac_policy_loss(log_probs, q1p_out, masks)
         entropy_loss = self.sac_entropy_loss(log_probs, masks)
+        # if self.total_steps % 20 == 0:
+        #     print("actions", actions[0][0])
+        #     print("value", value_estimates)
 
         total_value_loss = q1_loss + q2_loss
         if self.policy.shared_critic:
