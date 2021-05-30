@@ -169,7 +169,7 @@ class NetworkBody(nn.Module):
         if actions is not None:
             encoded_self = torch.cat([encoded_self, actions], dim=1)
         encoding = self.linear_encoder(encoded_self)
-
+#         print(encoding.size())
         if self.use_lstm:
             # Resize to (batch, sequence length, encoding size)
             encoding = encoding.reshape([-1, sequence_length, self.h_size])

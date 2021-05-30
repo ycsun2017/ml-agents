@@ -1,5 +1,5 @@
 behaviors:
-  PushBlockGridSensor:
+  PushBlock:
     trainer_type: dqn
     hyperparameters:
       learning_rate: 0.0003

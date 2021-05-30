@@ -157,9 +157,9 @@ class TorchDQNOptimizer(TorchOptimizer):
             self.policy.encoder,
             obs,
             actions,
-            memories,
-            sequence_length,
-            not self.hyperparameters.transfer_target
+            memories=memories,
+            sequence_length=sequence_length,
+            no_grad_encoder=not self.hyperparameters.transfer_target
         )
         
         loss_fn = torch.nn.MSELoss()
