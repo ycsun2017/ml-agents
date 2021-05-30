@@ -116,6 +116,7 @@ class TorchSACOptimizer(TorchOptimizer):
             policy.behavior_spec.observation_specs,
             policy.network_settings,
         )
+        print(self._critic)
 
         hyperparameters: SACSettings = cast(SACSettings, trainer_params.hyperparameters)
         self.tau = hyperparameters.tau
