@@ -148,7 +148,7 @@ class TorchDQNOptimizer(TorchOptimizer):
         sequence_length,
     ):
         encoded_next, _ = self.policy.encoder(
-            obs,
+            next_obs,
             None, 
             memories,
             sequence_length
