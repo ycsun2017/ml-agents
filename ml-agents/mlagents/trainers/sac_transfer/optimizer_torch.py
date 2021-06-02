@@ -487,7 +487,7 @@ class TorchSACTransferOptimizer(TorchOptimizer):
     )-> torch.Tensor:
         
         encoded_next, _ = self.critic.encoder(
-            obs,
+            next_obs,
             None, 
             memories,
             sequence_length
