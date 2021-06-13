@@ -51,6 +51,20 @@ def create_mlp(input_size, output_size, num_layers, hidden_size,
         ]
     return nn.Sequential(*layers)
 
+def nobias_layer(input_size, output_size):
+    kernel_init = Initialization.KaimingHeNormal
+    kernel_gain = 1.0
+    
+    layer = linear_layer(
+                input_size, 
+                output_size, 
+                kernel_init=kernel_init,
+                kernel_gain=kernel_gain,
+                bias=False
+            )
+    return layer
+
+
 class NetworkBody(nn.Module):
     def __init__(
         self,
@@ -358,7 +372,7 @@ class LatentEncoder(nn.Module):
                 kernel_init=Initialization.KaimingHeNormal,
                 kernel_gain=1.0
             ),
-            # L2Norm()
+#             L2Norm()
         ]
         self.latent = nn.Sequential(*layers)
 
@@ -442,18 +456,27 @@ class DynamicModel(nn.Module):
         if not onehot_action:
             self.num_actions = 1
 
-        self.predict_state = create_mlp(
-            self.enc_size + self.num_actions, 
-            self.enc_size, 
-            self.num_layers, 
-            self.h_size
-        )
+#         self.predict_state = create_mlp(
+#             self.enc_size + self.num_actions, 
+#             self.enc_size, 
+#             self.num_layers, 
+#             self.h_size
+#         )
 
-        self.predict_reward = create_mlp(
+#         self.predict_reward = create_mlp(
+#             self.enc_size + self.num_actions, 
+#             1, 
+#             self.num_layers, 
+#             self.h_size
+#         )
+        self.predict_state = nobias_layer(
             self.enc_size + self.num_actions, 
-            1, 
-            self.num_layers, 
-            self.h_size
+            self.enc_size
+        )
+    
+        self.predict_reward = nobias_layer(
+            self.enc_size + self.num_actions, 
+            1
         )
 
     def forward(

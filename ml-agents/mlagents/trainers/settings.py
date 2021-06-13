@@ -218,7 +218,7 @@ class DQNSettings(HyperparamSettings):
     # Network
     forward_layers: int = 2
     feature_size: int = 64
-    onhot_action: bool = True
+    onehot_action: bool = True
 
     @reward_signal_steps_per_update.default
     def _reward_signal_steps_per_update_default(self):
