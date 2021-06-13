@@ -169,9 +169,8 @@ class TransferPolicy(TorchPolicy):
         """
         if self.det_action:
             actions =  self.actor.get_action_and_stats(
-                obs, masks, memories, seq_len
+                obs, masks, memories, seq_len, add_noise=True
             )
-            print("actions", actions)
             return actions
         else:
             actions, log_probs, entropies, memories = self.actor.get_action_and_stats(

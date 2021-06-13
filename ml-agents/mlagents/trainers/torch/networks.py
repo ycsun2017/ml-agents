@@ -662,13 +662,14 @@ class SimpleActor(nn.Module, Actor):
         masks: Optional[torch.Tensor] = None,
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
+        add_noise: bool=False
     ) -> Tuple[AgentAction, ActionLogProbs, torch.Tensor, torch.Tensor]:
 
         encoding, memories = self.network_body(
             inputs, memories=memories, sequence_length=sequence_length
         )
         if self.det_action:
-            action = self.action_model(encoding, masks)
+            action = self.action_model(encoding, masks, add_noise)
             # print("action", action)
             return action
         else:
