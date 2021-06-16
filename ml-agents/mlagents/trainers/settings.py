@@ -136,6 +136,28 @@ class HyperparamSettings:
     learning_rate: float = 3.0e-4
     learning_rate_schedule: ScheduleType = ScheduleType.CONSTANT
 
+@attr.s(auto_attribs=True)
+class TransferSettings:
+    # Transfer
+    transfer_target: bool = False
+    transfer_from: str = ""
+    detach_next: bool = False
+    load_model: bool = True
+    load_value: bool = False
+    load_policy: bool = False
+    load_encoder: bool = False
+    load_action: bool = False
+    coeff: float = 1.0
+
+    # Network
+    encode_actor: bool = True
+    encoder_layers: int = 2
+    action_layers: int = -1
+    policy_layers: int = 1
+    value_layers: int = 1
+    forward_layers: int = 1
+    feature_size: int = 64
+    action_feature_size: int = 16
 
 @attr.s(auto_attribs=True)
 class PPOSettings(HyperparamSettings):
@@ -145,6 +167,15 @@ class PPOSettings(HyperparamSettings):
     num_epoch: int = 3
     learning_rate_schedule: ScheduleType = ScheduleType.LINEAR
 
+@attr.s(auto_attribs=True)
+class PPOTransferSettings(HyperparamSettings,TransferSettings):
+    beta: float = 5.0e-3
+    epsilon: float = 0.2
+    lambd: float = 0.95
+    num_epoch: int = 3
+    learning_rate_schedule: ScheduleType = ScheduleType.LINEAR
+    model_learning_rate: float = 3.0e-4
+    model_lr_schedule: ScheduleType = ScheduleType.CONSTANT
 
 @attr.s(auto_attribs=True)
 class SACSettings(HyperparamSettings):
@@ -162,7 +193,7 @@ class SACSettings(HyperparamSettings):
         return self.steps_per_update
 
 @attr.s(auto_attribs=True)
-class SACTransferSettings(HyperparamSettings):
+class SACTransferSettings(HyperparamSettings,TransferSettings):
     batch_size: int = 128
     buffer_size: int = 50000
     buffer_init_steps: int = 0
@@ -173,25 +204,6 @@ class SACTransferSettings(HyperparamSettings):
     reward_signal_steps_per_update: float = attr.ib()
     model_learning_rate: float = 3.0e-4
     model_lr_schedule: ScheduleType = ScheduleType.CONSTANT
-
-    # Transfer
-    transfer_target: bool = False
-    transfer_from: str = ""
-    detach_next: bool = False
-    load_model: bool = True
-    load_value: bool = False
-    load_policy: bool = False
-    load_encoder: bool = False
-    load_action: bool = False
-
-    # Network
-    encoder_layers: int = 1
-    action_layers: int = -1
-    policy_layers: int = 1
-    value_layers: int = 1
-    forward_layers: int = 2
-    feature_size: int = 64
-    action_feature_size: int = 16
 
     @reward_signal_steps_per_update.default
     def _reward_signal_steps_per_update_default(self):
@@ -688,6 +700,7 @@ class SelfPlaySettings:
 
 class TrainerType(Enum):
     PPO: str = "ppo"
+    PPOTRANSFER: str = "ppo_transfer"
     SAC: str = "sac"
     SACTRANSFER: str = "sac_transfer"
     DQN: str = "dqn"
@@ -696,6 +709,7 @@ class TrainerType(Enum):
     def to_settings(self) -> type:
         _mapping = {
             TrainerType.PPO: PPOSettings, 
+            TrainerType.PPOTRANSFER: PPOTransferSettings,
             TrainerType.SAC: SACSettings,
             TrainerType.SACTRANSFER: SACTransferSettings,
             TrainerType.DQN: DQNSettings,

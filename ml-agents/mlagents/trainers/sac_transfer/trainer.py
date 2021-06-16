@@ -367,7 +367,8 @@ class SACTransferTrainer(RLTrainer):
             self.initialize_or_load(
                 path=self.hyperparameters.transfer_from, 
                 load_encoder=False, 
-                load_value_heads=False
+                load_value_heads=True,
+                load_actor_heads=True
             )
 
         # Needed to resume loads properly
@@ -394,6 +395,7 @@ class SACTransferTrainer(RLTrainer):
         models = {
             "encoder": self.optimizer.critic.encoder.state_dict(),
             "value_heads": self.optimizer.critic.value_heads.state_dict(),
+            "actor_heads": self.policy.actor.action_model.state_dict(),
             "model": self.policy.model.state_dict()
         }
         torch.save(models, 
@@ -409,6 +411,7 @@ class SACTransferTrainer(RLTrainer):
         path=None,
         load_encoder=True, 
         load_value_heads=True, 
+        load_actor_heads=True,
         load_model=True
     ) -> None:
         """
@@ -426,6 +429,8 @@ class SACTransferTrainer(RLTrainer):
             self.optimizer.critic.encoder.load_state_dict(models["encoder"])
         if load_value_heads:
             self.optimizer.critic.value_heads.load_state_dict(models["value_heads"])
+        if load_actor_heads:
+            self.policy.actor.action_model.load_state_dict(models["actor_heads"])
         if load_model:
             self.policy.model.load_state_dict(models["model"])
         

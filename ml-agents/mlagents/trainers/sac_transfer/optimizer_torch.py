@@ -6,7 +6,7 @@ from mlagents_envs.logging_util import get_logger
 from mlagents.trainers.optimizer.torch_optimizer import TorchOptimizer
 from mlagents.trainers.policy.torch_policy import TorchPolicy
 from mlagents.trainers.settings import NetworkSettings
-from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork
+from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork, ActorEncoder
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
 from mlagents.trainers.torch.utils import ModelUtils
@@ -31,6 +31,7 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             observation_specs: List[ObservationSpec],
             network_settings: NetworkSettings,
             action_spec: ActionSpec,
+            feature_size: int,
         ):
             super().__init__()
             num_value_outs = max(sum(action_spec.discrete_branches), 1)
@@ -50,6 +51,36 @@ class TorchSACTransferOptimizer(TorchOptimizer):
                 num_action_ins,
                 num_value_outs,
             )
+            # act_feature_size = 16
+            # self.q1_network = EncodedValueNetwork(
+            #     stream_names,
+            #     observation_specs,
+            #     network_settings,
+            #     act_feature_size,
+            #     num_value_outs,
+            #     feature_size=feature_size
+            # )
+
+            # self.q2_network = EncodedValueNetwork(
+            #     stream_names,
+            #     observation_specs,
+            #     network_settings,
+            #     act_feature_size,
+            #     num_value_outs,
+            #     feature_size=feature_size
+            # )
+
+            # self.action1_network = ActorEncoder(
+            #     network_settings,
+            #     num_action_ins,
+            #     feature_size=act_feature_size
+            # )
+
+            # self.action2_network = ActorEncoder(
+            #     network_settings,
+            #     num_action_ins,
+            #     feature_size=act_feature_size
+            # )
 
         def forward(
             self,
@@ -77,6 +108,8 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             with ExitStack() as stack:
                 if not q1_grad:
                     stack.enter_context(torch.no_grad())
+                # action1_encoding = self.action1_network(actions)
+                # action2_encoding = self.action2_network(actions)
                 q1_out, _ = self.q1_network(
                     inputs,
                     actions=actions,
@@ -151,7 +184,9 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             self.policy.behavior_spec.observation_specs,
             policy_network_settings,
             self._action_spec,
+            feature_size = hyperparameters.feature_size
         )
+        print(self.q_network)
 
         self.target_network = EncodedValueNetwork(
             # self.policy.encoder,
@@ -160,6 +195,8 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             policy.network_settings,
             feature_size = hyperparameters.feature_size
         )
+        print("---actor----")
+        print(self.policy.actor)
         print("---critic----")
         print(self._critic)
         print("---target----")
@@ -224,25 +261,25 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             self.trainer_settings.max_steps,
         )
 
+        # if not self.hyperparameters.transfer_target:
+        # source task learning, train the encoder and value/policy networks, and fit a model
         self.policy_optimizer = torch.optim.Adam(
             policy_params, lr=hyperparameters.learning_rate
         )
-        
-        if not self.hyperparameters.transfer_target:
-            # source task learning, train the encoder and q networks, and fit a model
-            self.value_optimizer = torch.optim.Adam(
-                value_params, lr=hyperparameters.learning_rate
-            ) 
-            self.model_optimizer = torch.optim.Adam(
-                model_params, lr=hyperparameters.model_learning_rate
-            ) 
-        else:
-            self.value_optimizer = torch.optim.Adam(
-                value_params, lr=hyperparameters.learning_rate
-            )  
-            self.model_optimizer = torch.optim.Adam(
-                model_params, lr=hyperparameters.model_learning_rate
-            ) 
+        self.value_optimizer = torch.optim.Adam(
+            value_params, lr=hyperparameters.learning_rate
+        ) 
+        self.model_optimizer = torch.optim.Adam(
+            model_params, lr=hyperparameters.model_learning_rate
+        ) 
+        # else:
+        #     # target task learning, train the encoder 
+        #     self.value_optimizer = torch.optim.Adam(
+        #         value_params, lr=hyperparameters.learning_rate
+        #     )  
+        #     self.model_optimizer = torch.optim.Adam(
+        #         model_params, lr=hyperparameters.model_learning_rate
+        #     ) 
 
         self.entropy_optimizer = torch.optim.Adam(
             self._log_ent_coef.parameters(), lr=hyperparameters.learning_rate
@@ -478,22 +515,24 @@ class TorchSACTransferOptimizer(TorchOptimizer):
     
     def sac_model_loss(
         self,
+        encoder,
         obs,
         next_obs,
         actions,
         reward,
         memories,
         sequence_length,
+        detach_next
     )-> torch.Tensor:
         
-        encoded_next, _ = self.critic.encoder(
+        encoded_next, _ = encoder(
             next_obs,
             None, 
             memories,
             sequence_length
         )
         predict_next, predict_reward = self.policy.model(
-            self.critic.encoder,
+            encoder,
             obs,
             actions,
             memories,
@@ -503,11 +542,7 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         
         loss_fn = torch.nn.MSELoss()
 
-        # print("encoded next", encoded_next)
-        # print("pred next", predict_next)
-        # print("rew", reward)
-        # print("pred rew", predict_reward.squeeze())
-        if not self.hyperparameters.transfer_target or self.hyperparameters.detach_next:
+        if detach_next:
             encoded_next = encoded_next.detach()
         model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
 
@@ -676,21 +711,35 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             total_value_loss += value_loss
         
         model_loss = self.sac_model_loss(
+            self.critic.encoder,
             current_obs, 
             next_obs, 
             actions, 
             rewards["extrinsic"], 
             memories=value_memories,
             sequence_length=self.policy.sequence_length,
+            detach_next=True
         )
+        if self.hyperparameters.encode_actor:
+            actor_model_loss = self.sac_model_loss(
+                self.policy.actor.encoder,
+                current_obs, 
+                next_obs, 
+                actions, 
+                rewards["extrinsic"], 
+                memories=None,  # does not support memory for now
+                sequence_length=self.policy.sequence_length,
+                detach_next=True
+            )
 
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
-        ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr)
-        self.policy_optimizer.zero_grad()
-        policy_loss.backward()
-        self.policy_optimizer.step()
-
+        
         if not self.hyperparameters.transfer_target:
+            ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr)
+            self.policy_optimizer.zero_grad()
+            policy_loss.backward()
+            self.policy_optimizer.step()
+
             ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
             self.value_optimizer.zero_grad()
             total_value_loss.backward()
@@ -703,9 +752,17 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             self.model_optimizer.step()
         
         else:
+            ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr)
+            self.policy_optimizer.zero_grad()
+            if self.hyperparameters.encode_actor:
+                (policy_loss + self.hyperparameters.coeff * actor_model_loss).backward()
+            else:
+                policy_loss.backward()
+            self.policy_optimizer.step()
+
             ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
             self.value_optimizer.zero_grad()
-            (total_value_loss + 0.5 * model_loss).backward()
+            (total_value_loss + self.hyperparameters.coeff * model_loss).backward()
             self.value_optimizer.step()
 
         ModelUtils.update_learning_rate(self.entropy_optimizer, decay_lr)
