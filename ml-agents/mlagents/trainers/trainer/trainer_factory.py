@@ -8,6 +8,7 @@ from mlagents.trainers.trainer import Trainer
 from mlagents.trainers.ppo.trainer import PPOTrainer
 from mlagents.trainers.sac.trainer import SACTrainer
 from mlagents.trainers.sac_transfer.trainer import SACTransferTrainer
+from mlagents.trainers.ppo_transfer.trainer import PPOTransferTrainer
 from mlagents.trainers.dqn.trainer import DQNTrainer
 from mlagents.trainers.ddpg.trainer import DDPGTrainer
 from mlagents.trainers.ghost.trainer import GhostTrainer
@@ -117,6 +118,16 @@ class TrainerFactory:
 
         if trainer_type == TrainerType.PPO:
             trainer = PPOTrainer(
+                brain_name,
+                min_lesson_length,
+                trainer_settings,
+                train_model,
+                load_model,
+                seed,
+                trainer_artifact_path,
+            )
+        elif trainer_type == TrainerType.PPOTRANSFER:
+            trainer = PPOTransferTrainer(
                 brain_name,
                 min_lesson_length,
                 trainer_settings,

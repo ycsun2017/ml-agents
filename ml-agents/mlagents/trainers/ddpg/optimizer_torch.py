@@ -106,33 +106,6 @@ class TorchDDPGOptimizer(TorchOptimizer):
         ModelUtils.soft_update(self._critic, self.target_network, 1.0)
         ModelUtils.soft_update(self.policy.actor, self.target_actor, 1.0)
 
-        # We create one entropy coefficient per action, whether discrete or continuous.
-        _disc_log_ent_coef = torch.nn.Parameter(
-            torch.log(
-                torch.as_tensor(
-                    [self.init_entcoef] * len(self._action_spec.discrete_branches)
-                )
-            ),
-            requires_grad=True,
-        )
-        _cont_log_ent_coef = torch.nn.Parameter(
-            torch.log(torch.as_tensor([self.init_entcoef])), requires_grad=True
-        )
-        self._log_ent_coef = TorchDDPGOptimizer.LogEntCoef(
-            discrete=_disc_log_ent_coef, continuous=_cont_log_ent_coef
-        )
-        _cont_target = (
-            -1
-            * self.continuous_target_entropy_scale
-            * np.prod(self._action_spec.continuous_size).astype(np.float32)
-        )
-        _disc_target = [
-            self.discrete_target_entropy_scale * np.log(i).astype(np.float32)
-            for i in self._action_spec.discrete_branches
-        ]
-        self.target_entropy = TorchDDPGOptimizer.TargetEntropy(
-            continuous=_cont_target, discrete=_disc_target
-        )
         policy_params = list(self.policy.actor.parameters())
         model_params = list(self.policy.model.parameters())
         value_params = list(self._critic.parameters())
@@ -181,17 +154,14 @@ class TorchDDPGOptimizer(TorchOptimizer):
                 model_params, lr=hyperparameters.model_learning_rate
             ) 
 
-        self.entropy_optimizer = torch.optim.Adam(
-            self._log_ent_coef.parameters(), lr=hyperparameters.learning_rate
-        )
         self._move_to_device(default_device())
+        self.total_steps = 0
 
     @property
     def critic(self):
         return self._critic
 
     def _move_to_device(self, device: torch.device) -> None:
-        self._log_ent_coef.to(device)
         self.target_network.to(device)
         self._critic.to(device)
         self.target_actor.to(device)
@@ -226,7 +196,8 @@ class TorchDDPGOptimizer(TorchOptimizer):
             _q_loss = 0.5 * ModelUtils.masked_mean(
                 torch.nn.functional.mse_loss(q_backup, q_stream), loss_masks
             )
-
+            # print("backup", q_backup[0])
+            # print("out", q_stream[0])
             q_losses.append(_q_loss)
         q_loss = torch.mean(torch.stack(q_losses))
         return q_loss
@@ -255,18 +226,20 @@ class TorchDDPGOptimizer(TorchOptimizer):
             obs,
             cont_sampled_actions,
             memories=q_memories,
-            sequence_length=self.policy.sequence_length
+            sequence_length=self.policy.sequence_length,
         )
 
         losses = []
         # Multiple q losses per stream
         for i, name in enumerate(sampled_q.keys()):
             q_stream = sampled_q[name].squeeze()
-            loss = - 0.5 * ModelUtils.masked_mean(
+            loss = 0.5 * ModelUtils.masked_mean(
                 q_stream, loss_masks
             )
             losses.append(loss)
-        policy_loss = torch.mean(torch.stack(losses))
+        # print("policy losses", losses)
+        policy_loss = - torch.mean(torch.stack(losses))
+        # print("losses", policy_loss)
         return policy_loss
 
     
@@ -339,6 +312,7 @@ class TorchDDPGOptimizer(TorchOptimizer):
             indexed by name. If none, don't update the reward signals.
         :return: Output from update process.
         """
+        self.total_steps += 1
         rewards = {}
         for name in self.reward_signals:
             rewards[name] = ModelUtils.list_to_tensor(
@@ -409,7 +383,7 @@ class TorchDDPGOptimizer(TorchOptimizer):
         with torch.no_grad():
             target_actions = self.target_actor.get_action_and_stats(
                 next_obs,
-                memories=next_value_memories,
+                memories=memories,
                 sequence_length=self.policy.sequence_length,
             )
             if not self.policy.actor.det_action:
@@ -437,16 +411,19 @@ class TorchDDPGOptimizer(TorchOptimizer):
         # for name, p in self.policy.actor.named_parameters():
         #     print("before", name, p)
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
-        ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr*0.1)
+        ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr)
         self.policy_optimizer.zero_grad()
         policy_loss = self.ddpg_policy_loss(current_obs, act_masks, memories, q_memories, masks)
         policy_loss.backward()
         # for name, p in self.policy.actor.named_parameters():
         #     print("grad", name, p.grad)
         self.policy_optimizer.step()
-        # print("before", policy_loss.item())
-        # new_policy_loss = self.ddpg_policy_loss(current_obs, act_masks, memories, q_memories, masks)
-        # print("after", new_policy_loss.item())
+        if self.total_steps % 100 == 1:
+            print("action", actions[0][0])
+            print("before", policy_loss.item())
+            new_policy_loss = self.ddpg_policy_loss(current_obs, act_masks, memories, q_memories, masks)
+            print("after", new_policy_loss.item())
+
         
         # for name, p in self.policy.actor.named_parameters():
         #     print("after", name, p)

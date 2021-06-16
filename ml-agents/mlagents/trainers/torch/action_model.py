@@ -263,7 +263,7 @@ class DetActionModel(nn.Module):
         self._clip_action_on_export = not tanh_squash
     
     def forward(
-        self, inputs: torch.Tensor
+        self, inputs: torch.Tensor, masks: torch.Tensor, noisy: bool=False
     ) -> Tuple[AgentAction]:
         """
         The forward method of this module. Outputs the action, log probs,
@@ -276,7 +276,11 @@ class DetActionModel(nn.Module):
         continuous_action: Optional[torch.Tensor] = None
         discrete_action: Optional[List[torch.Tensor]] = None
         # This checks None because mypy complains otherwise
-        continuous_action = self.tanh(self.det_action(inputs))
+        continuous_action = self.det_action(inputs)
+        if noisy:
+            noise = torch.normal(0, 0.1, continuous_action.size())
+            continuous_action += noise
+        # continuous_action = self.tanh(continuous_action)
         return AgentAction(continuous_action, discrete_action)
     
     def get_action_out(self, inputs: torch.Tensor, masks: torch.Tensor) -> torch.Tensor:

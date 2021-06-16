@@ -11,7 +11,7 @@ from mlagents_envs.base_env import DecisionSteps, BehaviorSpec
 from mlagents_envs.timers import timed
 
 from mlagents.trainers.settings import TrainerSettings, SACTransferSettings
-from mlagents.trainers.torch.networks import SimpleActor, SharedActorCritic, GlobalSteps, LatentEncoder, DynamicModel
+from mlagents.trainers.torch.networks import SimpleActor, EncodedSimpleActor, SharedActorCritic, GlobalSteps, LatentEncoder, DynamicModel
 
 from mlagents.trainers.torch.utils import ModelUtils
 from mlagents.trainers.buffer import AgentBuffer
@@ -91,14 +91,25 @@ class TransferPolicy(TorchPolicy):
 
         if separate_critic:
             # Always separate
-            self.actor = SimpleActor(
-                observation_specs=self.behavior_spec.observation_specs,
-                network_settings=trainer_settings.network_settings,
-                action_spec=behavior_spec.action_spec,
-                conditional_sigma=self.condition_sigma_on_obs,
-                tanh_squash=tanh_squash,
-                det_action=self.det_action
-            )
+            if self.hyperparameters.encode_actor:
+                self.actor = EncodedSimpleActor(
+                    feature_size = self.hyperparameters.feature_size,
+                    observation_specs=self.behavior_spec.observation_specs,
+                    network_settings=trainer_settings.network_settings,
+                    action_spec=behavior_spec.action_spec,
+                    conditional_sigma=self.condition_sigma_on_obs,
+                    tanh_squash=tanh_squash,
+                    det_action=self.det_action
+                )
+            else:
+                self.actor = SimpleActor(
+                    observation_specs=self.behavior_spec.observation_specs,
+                    network_settings=trainer_settings.network_settings,
+                    action_spec=behavior_spec.action_spec,
+                    conditional_sigma=self.condition_sigma_on_obs,
+                    tanh_squash=tanh_squash,
+                    det_action=self.det_action
+                )
             self.shared_critic = False
         else:
             reward_signal_configs = trainer_settings.reward_signals
@@ -169,9 +180,8 @@ class TransferPolicy(TorchPolicy):
         """
         if self.det_action:
             actions =  self.actor.get_action_and_stats(
-                obs, masks, memories, seq_len
+                obs, masks, memories, seq_len, add_noise=True
             )
-            print("actions", actions)
             return actions
         else:
             actions, log_probs, entropies, memories = self.actor.get_action_and_stats(
