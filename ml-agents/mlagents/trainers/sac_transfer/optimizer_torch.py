@@ -5,7 +5,7 @@ from mlagents.torch_utils import torch, nn, default_device
 from mlagents_envs.logging_util import get_logger
 from mlagents.trainers.optimizer.torch_optimizer import TorchOptimizer
 from mlagents.trainers.policy.torch_policy import TorchPolicy
-from mlagents.trainers.settings import NetworkSettings
+from mlagents.trainers.settings import NetworkSettings, ScheduleType
 from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork, ActorEncoder
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
@@ -258,6 +258,12 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             hyperparameters.model_lr_schedule,
             hyperparameters.model_learning_rate,
             1e-10,
+            self.trainer_settings.max_steps,
+        )
+        self.decay_coeff = ModelUtils.DecayedValue(
+            hyperparameters.model_lr_schedule,
+            hyperparameters.coeff,
+            0,
             self.trainer_settings.max_steps,
         )
 
@@ -752,17 +758,18 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             self.model_optimizer.step()
         
         else:
+            coeff = self.decay_coeff.get_value(self.policy.get_current_step())
             ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr)
             self.policy_optimizer.zero_grad()
             if self.hyperparameters.encode_actor:
-                (policy_loss + self.hyperparameters.coeff * actor_model_loss).backward()
+                (policy_loss + coeff * actor_model_loss).backward()
             else:
                 policy_loss.backward()
             self.policy_optimizer.step()
 
             ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
             self.value_optimizer.zero_grad()
-            (total_value_loss + self.hyperparameters.coeff * model_loss).backward()
+            (total_value_loss + coeff * model_loss).backward()
             self.value_optimizer.step()
 
         ModelUtils.update_learning_rate(self.entropy_optimizer, decay_lr)

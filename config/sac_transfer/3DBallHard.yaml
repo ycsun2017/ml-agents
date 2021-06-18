@@ -2,10 +2,10 @@ behaviors:
   3DBallHard:
     trainer_type: sac_transfer
     hyperparameters:
-      learning_rate: 0.005
+      learning_rate: 0.0003
       learning_rate_schedule: constant
       batch_size: 64
-      buffer_size: 500000
+      buffer_size: 300000
       buffer_init_steps: 0
       tau: 0.005
       steps_per_update: 10.0
@@ -15,6 +15,7 @@ behaviors:
       transfer_target: false
       forward_layers: 1
       feature_size: 16
+      encode_actor: true
     network_settings:
       normalize: true
       hidden_units: 64

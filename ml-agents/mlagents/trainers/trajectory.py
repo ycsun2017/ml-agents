@@ -260,10 +260,12 @@ class Trajectory(NamedTuple):
             agent_buffer_trajectory[BufferKey.NEXT_DISC_ACTION].append(
                 disc_next_actions
             )
-            if BufferKey.CONTINUOUS_LOG_PROBS in agent_buffer_trajectory.keys():
+            
+            if exp.action_probs is not None:
                 agent_buffer_trajectory[BufferKey.CONTINUOUS_LOG_PROBS].append(
                     exp.action_probs.continuous
                 )
+            if exp.action_probs is not None:
                 agent_buffer_trajectory[BufferKey.DISCRETE_LOG_PROBS].append(
                     exp.action_probs.discrete
                 )
