@@ -157,6 +157,10 @@ class PPOTransferTrainer(RLTrainer):
             self.update_buffer, training_length=self.policy.sequence_length
         )
 
+        agent_buffer_trajectory.resequence_and_append(
+            self.model_buffer, training_length=self.policy.sequence_length
+        )
+
         # If this was a terminal trajectory, append stats and reset reward collection
         if trajectory.done_reached:
             self._update_end_episode_stats(agent_id, self.optimizer)
@@ -168,8 +172,6 @@ class PPOTransferTrainer(RLTrainer):
         """
         ckpt = super()._checkpoint()
         self.save_model_transfer()
-        if self.checkpoint_replay_buffer:
-            self.save_replay_buffer()
         return ckpt
 
     def save_model(self) -> None:
@@ -178,8 +180,6 @@ class PPOTransferTrainer(RLTrainer):
         Overrides the default to save the replay buffer.
         """
         super().save_model()
-        if self.checkpoint_replay_buffer:
-            self.save_replay_buffer()
         self.save_model_transfer(verbose=True)
 
 
@@ -197,6 +197,7 @@ class PPOTransferTrainer(RLTrainer):
         The reward signal generators must be updated in this method at their own pace.
         """
         buffer_length = self.update_buffer.num_experiences
+        model_buf_length = min(self.model_buffer.num_experiences, 36000)
         self.cumulative_returns_since_policy_update.clear()
 
         # Make sure batch_size is a multiple of sequence length. During training, we
@@ -222,11 +223,20 @@ class PPOTransferTrainer(RLTrainer):
         batch_update_stats = defaultdict(list)
         for _ in range(num_epoch):
             self.update_buffer.shuffle(sequence_length=self.policy.sequence_length)
+            self.model_buffer.shuffle(sequence_length=self.policy.sequence_length)
             buffer = self.update_buffer
             max_num_batch = buffer_length // batch_size
+            model_batch_size = model_buf_length // max_num_batch
+            j = 0
             for i in range(0, max_num_batch * batch_size, batch_size):
+                if self.hyperparameters.transfer_target:
+                    mod_buf = self.model_buffer.make_mini_batch(j, j + model_batch_size)
+                    j += model_batch_size
+                else:
+                    mod_buf = self.model_buffer.make_mini_batch(i, i + batch_size)
                 update_stats = self.optimizer.update(
-                    buffer.make_mini_batch(i, i + batch_size), n_sequences
+                    buffer.make_mini_batch(i, i + batch_size), n_sequences,
+                    mod_buf
                 )
                 for stat_name, value in update_stats.items():
                     batch_update_stats[stat_name].append(value)
@@ -243,21 +253,27 @@ class PPOTransferTrainer(RLTrainer):
 
     def create_torch_policy(
         self, parsed_behavior_id: BehaviorIdentifiers, behavior_spec: BehaviorSpec
-    ) -> TorchPolicy:
+    ) -> TransferPolicy:
         """
         Creates a policy with a PyTorch backend and PPO hyperparameters
         :param parsed_behavior_id:
         :param behavior_spec: specifications for policy construction
         :return policy
         """
-        policy = TorchPolicy(
+        policy = TransferPolicy(
             self.seed,
             behavior_spec,
             self.trainer_settings,
-            condition_sigma_on_obs=False,  # Faster training for PPO
-            tanh_squash=True,
-            separate_critic=True,  # Match network architecture with TF
+            condition_sigma_on_obs=False,
+            separate_critic=True,
         )
+        # policy = TorchPolicy(
+        #     self.seed,
+        #     behavior_spec,
+        #     self.trainer_settings,
+        #     condition_sigma_on_obs=False,  # Faster training for PPO
+        #     separate_critic=True,  # Match network architecture with TF
+        # )
         return policy
 
     def create_ppo_optimizer(self) -> TorchPPOTransferOptimizer:

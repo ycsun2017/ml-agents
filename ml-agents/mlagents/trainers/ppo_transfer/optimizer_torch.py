@@ -1,13 +1,13 @@
 from typing import Dict, cast
 from mlagents.torch_utils import torch, default_device
-
+import math
 from mlagents.trainers.buffer import AgentBuffer, BufferKey, RewardSignalUtil
 
 from mlagents_envs.timers import timed
 from mlagents.trainers.policy.transfer_policy import TransferPolicy
 from mlagents.trainers.optimizer.torch_optimizer import TorchOptimizer
 from mlagents.trainers.settings import TrainerSettings, PPOTransferSettings
-from mlagents.trainers.torch.networks import ValueNetwork
+from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
 from mlagents.trainers.torch.utils import ModelUtils
@@ -29,20 +29,34 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
         reward_signal_configs = trainer_settings.reward_signals
         reward_signal_names = [key.value for key, _ in reward_signal_configs.items()]
 
+        hyperparameters: PPOTransferSettings = cast(PPOTransferSettings, trainer_settings.hyperparameters)
+        self.hyperparameters = hyperparameters
+
         if policy.shared_critic:
             self._critic = policy.actor
         else:
-            self._critic = ValueNetwork(
+            # self._critic = ValueNetwork(
+            #     reward_signal_names,
+            #     policy.behavior_spec.observation_specs,
+            #     network_settings=trainer_settings.network_settings,
+            # )
+            self._critic = EncodedValueNetwork(
                 reward_signal_names,
                 policy.behavior_spec.observation_specs,
-                network_settings=trainer_settings.network_settings,
+                policy.network_settings,
+                feature_size = hyperparameters.feature_size
             )
+
             self._critic.to(default_device())
+        
+        print("---actor----")
+        print(self.policy.actor)
+        print("---critic----")
+        print(self._critic)
 
         params = list(self.policy.actor.parameters()) + list(self._critic.parameters())
-        self.hyperparameters: PPOTransferSettings = cast(
-            PPOTransferSettings, trainer_settings.hyperparameters
-        )
+        model_params = list(self.policy.model.parameters())
+        
         self.decay_learning_rate = ModelUtils.DecayedValue(
             self.hyperparameters.learning_rate_schedule,
             self.hyperparameters.learning_rate,
@@ -62,12 +76,30 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             self.trainer_settings.max_steps,
         )
 
+        self.decay_model_learning_rate = ModelUtils.DecayedValue(
+            hyperparameters.model_lr_schedule,
+            hyperparameters.model_learning_rate,
+            1e-10,
+            self.trainer_settings.max_steps,
+        )
+        self.decay_coeff = ModelUtils.DecayedValue(
+            hyperparameters.model_lr_schedule,
+            hyperparameters.coeff,
+            0,
+            self.trainer_settings.max_steps,
+        )
+
         self.optimizer = torch.optim.Adam(
             params, lr=self.trainer_settings.hyperparameters.learning_rate
         )
+        self.model_optimizer = torch.optim.Adam(
+            model_params, lr=hyperparameters.model_learning_rate
+        ) 
+
         self.stats_name_to_update_name = {
             "Losses/Value Loss": "value_loss",
             "Losses/Policy Loss": "policy_loss",
+            "Losses/Model Loss": "model_loss",
         }
 
         self.stream_names = list(self.reward_signals.keys())
@@ -132,9 +164,87 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             torch.min(p_opt_a, p_opt_b), loss_masks
         )
         return policy_loss
+    
+    def ppo_model_loss(
+        self,
+        encoder,
+        obs,
+        next_obs,
+        actions,
+        reward,
+        memories,
+        sequence_length,
+        detach_next
+    )-> torch.Tensor:
+        
+        encoded_next, _ = encoder(
+            next_obs,
+            None, 
+            memories,
+            sequence_length
+        )
+        predict_next, predict_reward = self.policy.model(
+            encoder,
+            obs,
+            actions,
+            memories,
+            sequence_length,
+            not self.hyperparameters.transfer_target
+        )
+        
+        loss_fn = torch.nn.MSELoss()
+
+        if detach_next:
+            encoded_next = encoded_next.detach()
+        model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
+
+        return model_loss
+    
+    def model_loss_batch(self, batch: AgentBuffer):
+        n_obs = len(self.policy.behavior_spec.observation_specs)
+        current_obs = ObsUtil.from_buffer(batch, n_obs)
+        # Convert to tensors
+        current_obs = [ModelUtils.list_to_tensor(obs) for obs in current_obs]
+
+        act_masks = ModelUtils.list_to_tensor(batch[BufferKey.ACTION_MASK])
+        actions = AgentAction.from_buffer(batch)
+
+        next_obs = ObsUtil.from_buffer_next(batch, n_obs)
+        # Convert to tensors
+        next_obs = [ModelUtils.list_to_tensor(obs) for obs in next_obs]
+
+        rewards = {}
+        for name in self.reward_signals:
+            rewards[name] = ModelUtils.list_to_tensor(
+                batch[RewardSignalUtil.rewards_key(name)]
+            )
+
+        model_loss = self.ppo_model_loss(
+            self.critic.encoder,
+            current_obs, 
+            next_obs, 
+            actions, 
+            rewards["extrinsic"], 
+            memories=None,  # does not support memory for now
+            sequence_length=self.policy.sequence_length,
+            detach_next=True
+        )
+        if self.hyperparameters.encode_actor:
+            actor_model_loss = self.ppo_model_loss(
+                self.policy.actor.encoder,
+                current_obs, 
+                next_obs, 
+                actions, 
+                rewards["extrinsic"], 
+                memories=None,  # does not support memory for now
+                sequence_length=self.policy.sequence_length,
+                detach_next=True
+            )
+            model_loss += actor_model_loss
+        return model_loss
 
     @timed
-    def update(self, batch: AgentBuffer, num_sequences: int) -> Dict[str, float]:
+    def update(self, batch: AgentBuffer, num_sequences: int, op_batch: AgentBuffer) -> Dict[str, float]:
         """
         Performs update on model.
         :param batch: Batch of experiences.
@@ -143,6 +253,8 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
         """
         # Get decayed parameters
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
+        decay_model_lr = self.decay_model_learning_rate.get_value(self.policy.get_current_step())
+        coeff = self.decay_coeff.get_value(self.policy.get_current_step())
         decay_eps = self.decay_epsilon.get_value(self.policy.get_current_step())
         decay_bet = self.decay_beta.get_value(self.policy.get_current_step())
         returns = {}
@@ -204,23 +316,47 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             old_log_probs,
             loss_masks,
         )
-        loss = (
-            policy_loss
-            + 0.5 * value_loss
-            - decay_bet * ModelUtils.masked_mean(entropy, loss_masks)
-        )
 
-        # Set optimizer learning rate
-        ModelUtils.update_learning_rate(self.optimizer, decay_lr)
-        self.optimizer.zero_grad()
-        loss.backward()
+        model_loss = self.model_loss_batch(op_batch)
 
-        self.optimizer.step()
+        if not self.hyperparameters.transfer_target:
+            loss = (
+                policy_loss
+                + 0.5 * value_loss
+                - decay_bet * ModelUtils.masked_mean(entropy, loss_masks)
+            )
+
+            # Set optimizer learning rate
+            ModelUtils.update_learning_rate(self.optimizer, decay_lr)
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+
+            ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
+            self.model_optimizer.zero_grad()
+            model_loss.backward()
+            self.model_optimizer.step()
+
+        else:
+            loss = (
+                policy_loss
+                + 0.5 * value_loss
+                + coeff * model_loss
+                - decay_bet * ModelUtils.masked_mean(entropy, loss_masks)
+            )
+
+            # Set optimizer learning rate
+            ModelUtils.update_learning_rate(self.optimizer, decay_lr)
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+        
         update_stats = {
             # NOTE: abs() is not technically correct, but matches the behavior in TensorFlow.
             # TODO: After PyTorch is default, change to something more correct.
             "Losses/Policy Loss": torch.abs(policy_loss).item(),
             "Losses/Value Loss": value_loss.item(),
+            "Losses/Model Loss": model_loss.item(),
             "Policy/Learning Rate": decay_lr,
             "Policy/Epsilon": decay_eps,
             "Policy/Beta": decay_bet,

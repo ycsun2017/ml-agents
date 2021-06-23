@@ -376,7 +376,7 @@ class LatentEncoder(nn.Module):
                 kernel_init=Initialization.KaimingHeNormal,
                 kernel_gain=1.0
             ),
-#             L2Norm()
+            # Swish()
         ]
         self.latent = nn.Sequential(*layers)
 

@@ -754,6 +754,8 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             decay_model_lr = self.decay_model_learning_rate.get_value(self.policy.get_current_step())
             ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
             self.model_optimizer.zero_grad()
+            if self.hyperparameters.encode_actor:
+                model_loss += actor_model_loss
             model_loss.backward()
             self.model_optimizer.step()
         
