@@ -374,7 +374,7 @@ class TorchDQNOptimizer(TorchOptimizer):
                 memories=q_memories,
                 sequence_length=self.policy.sequence_length,
             )
-            (q_loss + 0.5 * model_loss).backward()
+            (q_loss + self.hyperparameters.coeff * model_loss).backward()
             self.value_optimizer.step()
 
             # decay_model_lr = self.decay_model_lr.get_value(self.policy.get_current_step())

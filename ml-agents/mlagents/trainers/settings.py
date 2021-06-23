@@ -231,6 +231,7 @@ class DQNSettings(HyperparamSettings):
     forward_layers: int = 2
     feature_size: int = 64
     onehot_action: bool = True
+    coeff: float = 1.0
 
     @reward_signal_steps_per_update.default
     def _reward_signal_steps_per_update_default(self):

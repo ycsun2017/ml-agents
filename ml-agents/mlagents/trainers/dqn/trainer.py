@@ -362,7 +362,7 @@ class DQNTrainer(RLTrainer):
             self.initialize_or_load(
                 path=self.hyperparameters.transfer_from, 
                 load_encoder=False, 
-                load_q_head=False
+                load_q_head=True
             )
 
         # Needed to resume loads properly
