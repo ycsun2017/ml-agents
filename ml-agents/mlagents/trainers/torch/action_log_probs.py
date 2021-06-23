@@ -5,6 +5,7 @@ import numpy as np
 from mlagents.trainers.torch.utils import ModelUtils
 from mlagents.trainers.buffer import AgentBuffer, BufferKey
 from mlagents_envs.base_env import _ActionTupleBase
+from torch._C import BufferDict
 
 
 class LogProbsTuple(_ActionTupleBase):
@@ -96,7 +97,6 @@ class ActionLogProbs(NamedTuple):
         """
         continuous: torch.Tensor = None
         discrete: List[torch.Tensor] = None  # type: ignore
-
         if BufferKey.CONTINUOUS_LOG_PROBS in buff:
             continuous = ModelUtils.list_to_tensor(buff[BufferKey.CONTINUOUS_LOG_PROBS])
         if BufferKey.DISCRETE_LOG_PROBS in buff:
