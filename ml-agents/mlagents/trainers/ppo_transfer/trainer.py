@@ -223,17 +223,21 @@ class PPOTransferTrainer(RLTrainer):
         batch_update_stats = defaultdict(list)
         for _ in range(num_epoch):
             self.update_buffer.shuffle(sequence_length=self.policy.sequence_length)
-            self.model_buffer.shuffle(sequence_length=self.policy.sequence_length)
+            # self.model_buffer.shuffle(sequence_length=self.policy.sequence_length)
             buffer = self.update_buffer
             max_num_batch = buffer_length // batch_size
             model_batch_size = model_buf_length // max_num_batch
             j = 0
             for i in range(0, max_num_batch * batch_size, batch_size):
-                if self.hyperparameters.transfer_target:
-                    mod_buf = self.model_buffer.make_mini_batch(j, j + model_batch_size)
-                    j += model_batch_size
-                else:
-                    mod_buf = self.model_buffer.make_mini_batch(i, i + batch_size)
+                # if self.hyperparameters.transfer_target:
+                #     mod_buf = self.model_buffer.make_mini_batch(j, j + model_batch_size)
+                #     j += model_batch_size
+                # else:
+                # mod_buf = self.model_buffer.make_mini_batch(i, i + batch_size)
+                mod_buf = self.model_buffer.sample_mini_batch(
+                    batch_size,
+                    sequence_length=self.policy.sequence_length,
+                )
                 update_stats = self.optimizer.update(
                     buffer.make_mini_batch(i, i + batch_size), n_sequences,
                     mod_buf
@@ -332,7 +336,8 @@ class PPOTransferTrainer(RLTrainer):
         """
         model_path = self.artifact_path
         models = {
-            "encoder": self.optimizer.critic.encoder.state_dict(),
+            "critic_encoder": self.optimizer.critic.encoder.state_dict() if self.hyperparameters.encode_critic else None,
+            "actor_encoder": self.policy.actor.encoder.state_dict() if self.hyperparameters.encode_actor else None,
             "value_heads": self.optimizer.critic.value_heads.state_dict(),
             "actor_heads": self.policy.actor.action_model.state_dict(),
             "model": self.policy.model.state_dict()
@@ -364,8 +369,8 @@ class PPOTransferTrainer(RLTrainer):
         print("loading model from", model_path)
         models = torch.load(os.path.join(model_path, "models.pt"))
 
-        if load_encoder:
-            self.optimizer.critic.encoder.load_state_dict(models["encoder"])
+        # if load_encoder:
+        #     self.optimizer.critic.encoder.load_state_dict(models["encoder"])
         if load_value_heads:
             self.optimizer.critic.value_heads.load_state_dict(models["value_heads"])
         if load_actor_heads:

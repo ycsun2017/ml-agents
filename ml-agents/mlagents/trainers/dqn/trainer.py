@@ -362,7 +362,14 @@ class DQNTrainer(RLTrainer):
             self.initialize_or_load(
                 path=self.hyperparameters.transfer_from, 
                 load_encoder=False, 
-                load_q_head=True
+                load_q_head=False
+            )
+        elif self.hyperparameters.model_only:
+            self.initialize_or_load(
+                path=self.hyperparameters.transfer_from, 
+                load_encoder=True, 
+                load_q_head=True,
+                load_model=True
             )
 
         # Needed to resume loads properly
@@ -417,10 +424,13 @@ class DQNTrainer(RLTrainer):
 
         if load_encoder:
             self.policy.encoder.load_state_dict(models["encoder"])
+            print("loaded encoder")
         if load_q_head:
             self.policy.q_network.q_head.load_state_dict(models["q_head"])
+            print("loaded q head")
         if load_model:
             self.policy.model.load_state_dict(models["model"])
+            print("loaded model")
         
 
         for name, param in self.policy.model.named_parameters():

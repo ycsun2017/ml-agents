@@ -99,7 +99,8 @@ class TransferPolicy(TorchPolicy):
                     action_spec=behavior_spec.action_spec,
                     conditional_sigma=self.condition_sigma_on_obs,
                     tanh_squash=tanh_squash,
-                    det_action=self.det_action
+                    det_action=self.det_action,
+                    norm_latent=self.hyperparameters.norm_latent
                 )
             else:
                 self.actor = SimpleActor(

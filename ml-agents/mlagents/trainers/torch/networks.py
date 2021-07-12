@@ -277,6 +277,7 @@ class EncodedValueNetwork(nn.Module, Critic):
         act_size: int = 0,
         outputs_per_stream: int = 1,
         feature_size: int = 64,
+        norm_latent: bool = False,
     ):
         # This is not a typo, we want to call __init__ of nn.Module
         nn.Module.__init__(self)
@@ -285,7 +286,8 @@ class EncodedValueNetwork(nn.Module, Critic):
             observation_specs, 
             network_settings,
             0,
-            feature_size
+            feature_size,
+            norm_latent
         )
         self.act_size = act_size
         self.value_heads = ValueHeads(stream_names, feature_size+act_size, outputs_per_stream)
@@ -357,6 +359,7 @@ class LatentEncoder(nn.Module):
         network_settings: NetworkSettings,
         encoded_act_size: int = 0,
         feature_size: int = 64,
+        norm_latent: bool = False
     ):
         super().__init__()
         
@@ -375,11 +378,12 @@ class LatentEncoder(nn.Module):
                 feature_size, 
                 kernel_init=Initialization.KaimingHeNormal,
                 kernel_gain=1.0
-            ),
-            # Swish()
+            )
         ]
+        if norm_latent:
+            layers.append(L2Norm())
+            
         self.latent = nn.Sequential(*layers)
-
 
     def forward(
         self,
@@ -473,7 +477,7 @@ class DynamicModel(nn.Module):
         num_actions: int,
         h_size: int,
         num_layers: int,
-        onehot_action: bool = True
+        onehot_action: bool = True,
     ):
         super().__init__()
 
@@ -483,7 +487,6 @@ class DynamicModel(nn.Module):
         self.enc_size = enc_size
         if not onehot_action:
             self.num_actions = 1
-
 #         self.predict_state = create_mlp(
 #             self.enc_size + self.num_actions, 
 #             self.enc_size, 
@@ -827,6 +830,7 @@ class EncodedSimpleActor(nn.Module, Actor):
         conditional_sigma: bool = False,
         tanh_squash: bool = False,
         det_action: bool = False,
+        norm_latent: bool = False
     ):
         super().__init__()
         self.action_spec = action_spec
@@ -857,7 +861,8 @@ class EncodedSimpleActor(nn.Module, Actor):
             observation_specs, 
             network_settings,
             0,
-            feature_size
+            feature_size,
+            norm_latent
         )
         self.encoding_size = feature_size
         # if network_settings.memory is not None:

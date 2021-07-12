@@ -78,7 +78,8 @@ class DQNPolicy(Policy):
             behavior_spec.observation_specs, 
             trainer_settings.network_settings,
             int(behavior_spec.action_spec.continuous_size),
-            self.hyperparameters.feature_size
+            self.hyperparameters.feature_size,
+            self.hyperparameters.norm_latent
         )
 
         # The Q net based on the encoder

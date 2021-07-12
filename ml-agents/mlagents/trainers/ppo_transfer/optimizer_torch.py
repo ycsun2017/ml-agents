@@ -10,7 +10,7 @@ from mlagents.trainers.settings import TrainerSettings, PPOTransferSettings
 from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
-from mlagents.trainers.torch.utils import ModelUtils
+from mlagents.trainers.torch.utils import ModelUtils, MovingMeanStd
 from mlagents.trainers.trajectory import ObsUtil
 
 
@@ -35,18 +35,20 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
         if policy.shared_critic:
             self._critic = policy.actor
         else:
-            # self._critic = ValueNetwork(
-            #     reward_signal_names,
-            #     policy.behavior_spec.observation_specs,
-            #     network_settings=trainer_settings.network_settings,
-            # )
-            self._critic = EncodedValueNetwork(
-                reward_signal_names,
-                policy.behavior_spec.observation_specs,
-                policy.network_settings,
-                feature_size = hyperparameters.feature_size
-            )
-
+            if self.hyperparameters.encode_critic:
+                self._critic = EncodedValueNetwork(
+                    reward_signal_names,
+                    policy.behavior_spec.observation_specs,
+                    policy.network_settings,
+                    feature_size = hyperparameters.feature_size,
+                    norm_latent = hyperparameters.norm_latent
+                )
+            else:
+                self._critic = ValueNetwork(
+                    reward_signal_names,
+                    policy.behavior_spec.observation_specs,
+                    network_settings=trainer_settings.network_settings,
+                )
             self._critic.to(default_device())
         
         print("---actor----")
@@ -103,6 +105,9 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
         }
 
         self.stream_names = list(self.reward_signals.keys())
+
+        if self.hyperparameters.norm_reward:
+            self.reward_ma = MovingMeanStd(self.hyperparameters.batch_size, default_device())
 
     @property
     def critic(self):
@@ -196,7 +201,27 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
 
         if detach_next:
             encoded_next = encoded_next.detach()
-        model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
+        
+        if self.hyperparameters.norm_reward:
+            reward = torch.div(reward - self.reward_ma.mean(), self.reward_ma.std())
+            self.reward_ma.push(reward)
+        
+        if self.hyperparameters.predict_delta:
+            encoded_cur, _ = encoder(
+                obs,
+                None, 
+                memories,
+                sequence_length
+            )
+            encoded_cur = encoded_cur.detach()
+            model_loss = loss_fn(encoded_next-encoded_cur, predict_next) + loss_fn(reward, predict_reward.squeeze())
+        else:
+            # print("encoded next", encoded_next)
+            # print("predict next", predict_next)
+            # print("reward", reward)
+            # print("predict reward", predict_reward.squeeze())
+            # print("std", self.reward_ma.std())
+            model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
 
         return model_loss
     
@@ -218,17 +243,19 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             rewards[name] = ModelUtils.list_to_tensor(
                 batch[RewardSignalUtil.rewards_key(name)]
             )
-
-        model_loss = self.ppo_model_loss(
-            self.critic.encoder,
-            current_obs, 
-            next_obs, 
-            actions, 
-            rewards["extrinsic"], 
-            memories=None,  # does not support memory for now
-            sequence_length=self.policy.sequence_length,
-            detach_next=True
-        )
+        if self.hyperparameters.encode_critic:
+            model_loss = self.ppo_model_loss(
+                self.critic.encoder,
+                current_obs, 
+                next_obs, 
+                actions, 
+                rewards["extrinsic"], 
+                memories=None,  # does not support memory for now
+                sequence_length=self.policy.sequence_length,
+                detach_next=True
+            )
+        else:
+            model_loss = 0
         if self.hyperparameters.encode_actor:
             actor_model_loss = self.ppo_model_loss(
                 self.policy.actor.encoder,
@@ -316,7 +343,7 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             old_log_probs,
             loss_masks,
         )
-
+        
         model_loss = self.model_loss_batch(op_batch)
 
         if not self.hyperparameters.transfer_target:

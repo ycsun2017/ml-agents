@@ -14,6 +14,37 @@ from mlagents.trainers.torch.attention import EntityEmbedding
 from mlagents.trainers.exception import UnityTrainerException
 from mlagents_envs.base_env import ObservationSpec, DimensionProperty
 
+### Compute rolling mean and standard deviation
+class MovingMeanStd:
+    
+    def __init__(self, shape, device):
+        self.n = 0
+        self.shape = shape   
+        self.device = device
+    def push(self, x):
+        self.n += 1
+        if self.n == 1:
+            self.old_m = self.new_m = x
+            self.old_s = 0
+        else:
+            self.new_m = self.old_m + (x - self.old_m) / self.n
+            self.new_s = self.old_s + (x - self.old_m) * (x - self.new_m)
+            self.old_m = self.new_m
+            self.old_s = self.new_s
+    def mean(self):
+        if self.n > 0:
+            return self.new_m
+        else:
+            return torch.zeros(self.shape).to(self.device)
+    def variance(self):
+        if self.n > 1:
+            return self.new_s / (self.n - 1) 
+        else:
+            return torch.ones(self.shape).to(self.device)
+        
+    def std(self):
+        return torch.sqrt(self.variance())
+
 
 class ModelUtils:
     # Minimum supported side for each encoder type. If refactoring an encoder, please

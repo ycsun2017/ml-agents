@@ -151,6 +151,7 @@ class TransferSettings:
 
     # Network
     encode_actor: bool = True
+    encode_critic: bool = True
     encoder_layers: int = 2
     action_layers: int = -1
     policy_layers: int = 1
@@ -158,6 +159,9 @@ class TransferSettings:
     forward_layers: int = 1
     feature_size: int = 64
     action_feature_size: int = 16
+    norm_latent: bool = False
+    norm_reward: bool = True
+    predict_delta: bool = False
 
 @attr.s(auto_attribs=True)
 class PPOSettings(HyperparamSettings):
@@ -226,12 +230,18 @@ class DQNSettings(HyperparamSettings):
     transfer_target: bool = False
     transfer_from: str = ""
     detach_next: bool = False
+    model_only: bool = False
+    value_only: bool = False
 
     # Network
     forward_layers: int = 2
     feature_size: int = 64
     onehot_action: bool = True
+    norm_latent: bool = False
+    norm_reward: bool = True
+    predict_delta: bool = False
     coeff: float = 1.0
+
 
     @reward_signal_steps_per_update.default
     def _reward_signal_steps_per_update_default(self):

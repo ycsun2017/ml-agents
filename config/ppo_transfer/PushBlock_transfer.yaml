@@ -1,6 +1,6 @@
 behaviors:
   PushBlock:
-    trainer_type: ppo
+    trainer_type: ppo_transfer
     hyperparameters:
       batch_size: 128
       buffer_size: 2048
