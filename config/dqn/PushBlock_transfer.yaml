@@ -16,12 +16,12 @@ behaviors:
       forward_layers: 1
       transfer_target: true
 #       transfer_from: "results/pushblock_dqn_fix/PushBlock"
-      transfer_from: "results/pushblock_dqn_f100_linear_normlarw/PushBlock"
-      coeff: 10.0
+      transfer_from: "results/pushblock_dqn_actionlinear/PushBlock"
+      coeff: 1.0
       detach_next: true
       norm_latent: true
       norm_reward: true
-      predict_delta: false
+      predict_delta: true
       model_only: false
       value_only: false
     network_settings:

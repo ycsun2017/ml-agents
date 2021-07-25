@@ -156,7 +156,17 @@ class TorchDQNOptimizer(TorchOptimizer):
         memories,
         sequence_length,
     ):
-
+        loss_fn = torch.nn.MSELoss()
+        
+        if self.hyperparameters.model_raw:
+            predict_next, predict_reward = self.policy.model.raw_forward(
+                obs,
+                actions,
+                no_grad_encoder = not self.hyperparameters.transfer_target
+            )
+            encoded_next = torch.cat(next_obs, dim=1)
+            return loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
+        
         encoded_next, _ = self.policy.encoder(
             next_obs,
             None, 
@@ -171,10 +181,6 @@ class TorchDQNOptimizer(TorchOptimizer):
             sequence_length=sequence_length,
             no_grad_encoder=not self.hyperparameters.transfer_target
         )
-        # print("encoded", encoded_next)
-        # print("pred", predict_next)
-        
-        loss_fn = torch.nn.MSELoss()
 
         if self.hyperparameters.detach_next:
             encoded_next = encoded_next.detach()
@@ -196,6 +202,71 @@ class TorchDQNOptimizer(TorchOptimizer):
             model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
         return model_loss
 
+    def model_loss_batch(self, batch):
+        rewards = {}
+        for name in self.reward_signals:
+            rewards[name] = ModelUtils.list_to_tensor(
+                batch[RewardSignalUtil.rewards_key(name)]
+            )
+
+        n_obs = len(self.policy.behavior_spec.observation_specs)
+        current_obs = ObsUtil.from_buffer(batch, n_obs)
+        # Convert to tensors
+        current_obs = [ModelUtils.list_to_tensor(obs) for obs in current_obs]
+
+        next_obs = ObsUtil.from_buffer_next(batch, n_obs)
+        # Convert to tensors
+        next_obs = [ModelUtils.list_to_tensor(obs) for obs in next_obs]
+
+        act_masks = ModelUtils.list_to_tensor(batch[BufferKey.ACTION_MASK])
+        actions = AgentAction.from_buffer(batch)
+
+        memories_list = [
+            ModelUtils.list_to_tensor(batch[BufferKey.MEMORY][i])
+            for i in range(0, len(batch[BufferKey.MEMORY]), self.policy.sequence_length)
+        ]
+        # LSTM shouldn't have sequence length <1, but stop it from going out of the index if true.
+        value_memories_list = [
+            ModelUtils.list_to_tensor(batch[BufferKey.CRITIC_MEMORY][i])
+            for i in range(
+                0, len(batch[BufferKey.CRITIC_MEMORY]), self.policy.sequence_length
+            )
+        ]
+        offset = 1 if self.policy.sequence_length > 1 else 0
+        next_value_memories_list = [
+            ModelUtils.list_to_tensor(
+                batch[BufferKey.CRITIC_MEMORY][i]
+            )  # only pass value part of memory to target network
+            for i in range(
+                offset, len(batch[BufferKey.CRITIC_MEMORY]), self.policy.sequence_length
+            )
+        ]
+
+        if len(memories_list) > 0:
+            memories = torch.stack(memories_list).unsqueeze(0)
+            value_memories = torch.stack(value_memories_list).unsqueeze(0)
+            next_value_memories = torch.stack(next_value_memories_list).unsqueeze(0)
+        else:
+            memories = None
+            value_memories = None
+            next_value_memories = None
+
+        # Q and V network memories are 0'ed out, since we don't have them during inference.
+        q_memories = (
+            torch.zeros_like(next_value_memories)
+            if next_value_memories is not None
+            else None
+        )
+
+        model_loss = self.model_loss(
+            current_obs, 
+            next_obs, 
+            actions, 
+            rewards["extrinsic"], 
+            memories=q_memories,
+            sequence_length=self.policy.sequence_length,
+        )
+        return model_loss
 
     def dqn_q_loss(
         self,
@@ -248,7 +319,7 @@ class TorchDQNOptimizer(TorchOptimizer):
         return condensed_q_output
 
     @timed
-    def update(self, batch: AgentBuffer, num_sequences: int) -> Dict[str, float]:
+    def update(self, batch: AgentBuffer, model_batch: AgentBuffer, num_sequences: int) -> Dict[str, float]:
         """
         Updates model using buffer.
         :param num_sequences: Number of trajectories in batch.
@@ -352,6 +423,8 @@ class TorchDQNOptimizer(TorchOptimizer):
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
         ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
 
+
+
         if not self.hyperparameters.transfer_target:
             if not self.hyperparameters.model_only:
                 self.value_optimizer.zero_grad()
@@ -364,14 +437,15 @@ class TorchDQNOptimizer(TorchOptimizer):
             decay_model_lr = self.decay_model_lr.get_value(self.policy.get_current_step())
             ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
             self.model_optimizer.zero_grad()
-            model_loss = self.model_loss(
-                current_obs, 
-                next_obs, 
-                actions, 
-                rewards["extrinsic"], 
-                memories=q_memories,
-                sequence_length=self.policy.sequence_length,
-            )
+            model_loss = self.model_loss_batch(model_batch)
+            # model_loss = self.model_loss(
+            #     current_obs, 
+            #     next_obs, 
+            #     actions, 
+            #     rewards["extrinsic"], 
+            #     memories=q_memories,
+            #     sequence_length=self.policy.sequence_length,
+            # )
             model_loss.backward()
             self.model_optimizer.step()
         
@@ -381,14 +455,15 @@ class TorchDQNOptimizer(TorchOptimizer):
             q_loss = self.dqn_q_loss(
                 q_stream, target_values, dones, rewards, masks
             )
-            model_loss = self.model_loss(
-                current_obs, 
-                next_obs, 
-                actions, 
-                rewards["extrinsic"], 
-                memories=q_memories,
-                sequence_length=self.policy.sequence_length,
-            )
+            model_loss = self.model_loss_batch(model_batch)
+            # model_loss = self.model_loss(
+            #     current_obs, 
+            #     next_obs, 
+            #     actions, 
+            #     rewards["extrinsic"], 
+            #     memories=q_memories,
+            #     sequence_length=self.policy.sequence_length,
+            # )
             (q_loss + self.hyperparameters.coeff * model_loss).backward()
             self.value_optimizer.step()
 

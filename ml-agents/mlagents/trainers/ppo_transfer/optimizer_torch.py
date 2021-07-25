@@ -181,6 +181,15 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
         sequence_length,
         detach_next
     )-> torch.Tensor:
+        loss_fn = torch.nn.MSELoss()
+        if self.hyperparameters.model_raw:
+            predict_next, predict_reward = self.policy.model.raw_forward(
+                obs,
+                actions,
+                no_grad_encoder = not self.hyperparameters.transfer_target
+            )
+            encoded_next = torch.cat(next_obs, dim=1)
+            return loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
         
         encoded_next, _ = encoder(
             next_obs,
@@ -194,11 +203,9 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             actions,
             memories,
             sequence_length,
-            not self.hyperparameters.transfer_target
+            no_grad_encoder = not self.hyperparameters.transfer_target
         )
         
-        loss_fn = torch.nn.MSELoss()
-
         if detach_next:
             encoded_next = encoded_next.detach()
         
@@ -216,12 +223,8 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             encoded_cur = encoded_cur.detach()
             model_loss = loss_fn(encoded_next-encoded_cur, predict_next) + loss_fn(reward, predict_reward.squeeze())
         else:
-            # print("encoded next", encoded_next)
-            # print("predict next", predict_next)
-            # print("reward", reward)
-            # print("predict reward", predict_reward.squeeze())
-            # print("std", self.reward_ma.std())
             model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
+            # model_loss = loss_fn(reward, predict_reward.squeeze())
 
         return model_loss
     
@@ -359,10 +362,11 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             loss.backward()
             self.optimizer.step()
 
-            ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
-            self.model_optimizer.zero_grad()
-            model_loss.backward()
-            self.model_optimizer.step()
+            if self.hyperparameters.encode_critic or self.hyperparameters.encode_actor:
+                ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
+                self.model_optimizer.zero_grad()
+                model_loss.backward()
+                self.model_optimizer.step()
 
         else:
             loss = (
@@ -383,7 +387,7 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             # TODO: After PyTorch is default, change to something more correct.
             "Losses/Policy Loss": torch.abs(policy_loss).item(),
             "Losses/Value Loss": value_loss.item(),
-            "Losses/Model Loss": model_loss.item(),
+            "Losses/Model Loss": model_loss.item() if type(model_loss) is not int else model_loss,
             "Policy/Learning Rate": decay_lr,
             "Policy/Epsilon": decay_eps,
             "Policy/Beta": decay_bet,

@@ -19,7 +19,8 @@ behaviors:
       detach_next: false
       norm_latent: true
       norm_reward: true
-      predict_delta: false
+      predict_delta: true
+      model_raw: false
     network_settings:
       normalize: false
       hidden_units: 256

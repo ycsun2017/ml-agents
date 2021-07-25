@@ -315,8 +315,8 @@ class PPOTransferTrainer(RLTrainer):
             self.initialize_or_load(
                 path=self.hyperparameters.transfer_from, 
                 load_encoder=False, 
-                load_value_heads=True,
-                load_actor_heads=True
+                load_value_heads=False,
+                load_actor_heads=False
             )
 
         # Needed to resume loads properly

@@ -478,6 +478,7 @@ class DynamicModel(nn.Module):
         h_size: int,
         num_layers: int,
         onehot_action: bool = True,
+        is_dist: bool = True
     ):
         super().__init__()
 
@@ -485,43 +486,107 @@ class DynamicModel(nn.Module):
         self.num_actions = num_actions
         self.num_layers = num_layers
         self.enc_size = enc_size
-        if not onehot_action:
-            self.num_actions = 1
-#         self.predict_state = create_mlp(
-#             self.enc_size + self.num_actions, 
-#             self.enc_size, 
-#             self.num_layers, 
-#             self.h_size
-#         )
+        self.is_dist = is_dist
 
-#         self.predict_reward = create_mlp(
-#             self.enc_size + self.num_actions, 
-#             1, 
-#             self.num_layers, 
-#             self.h_size
-#         )
-        self.predict_state = nobias_layer(
-            self.enc_size + self.num_actions, 
-            self.enc_size
+        if is_dist and not onehot_action:
+            self.num_actions = 1
+
+        self.predict_state = create_mlp(
+            self.enc_size, 
+            self.enc_size, 
+            self.num_layers, 
+            self.h_size
         )
+
+        self.predict_reward = create_mlp(
+            self.enc_size, 
+            1, 
+            self.num_layers, 
+            self.h_size
+        )
+
+        self.predict_state_mapping = create_mlp(
+            self.num_actions, 
+            self.enc_size, 
+            self.num_layers, 
+            self.h_size
+        )
+
+        self.predict_reward_mapping = create_mlp(
+            self.num_actions, 
+            self.enc_size, 
+            self.num_layers, 
+            self.h_size
+        )
+
+        
+        # self.predict_state = nobias_layer(
+        #     self.enc_size + self.num_actions, 
+        #     self.enc_size
+        # )
     
-        self.predict_reward = nobias_layer(
-            self.enc_size + self.num_actions, 
-            1
-        )
+        # self.predict_reward = nobias_layer(
+        #     self.enc_size + self.num_actions, 
+        #     1
+        # )
 
     def forward(
         self,
         encoder,
         inputs: List[torch.Tensor],
         actions: AgentAction,
-        is_dist: bool = True,
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
         no_grad_encoder: bool = True,
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
 
-        if is_dist:
+        if self.is_dist:
+            cont_action = actions.continuous_tensor
+            dist_actions = torch.cat(actions.discrete_list)
+
+            encoding, _ = encoder(
+                inputs, cont_action, memories, sequence_length
+            )
+            if self.num_actions > 1:
+                onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
+                state_action = onehot.float()
+            else:
+                state_action = dist_actions.unsqueeze(1)
+        else:
+            cont_action = actions.continuous_tensor
+            encoding, _ = encoder(
+                inputs, None, memories, sequence_length
+            )
+            state_action = cont_action
+
+        if no_grad_encoder:
+            encoding = encoding.detach()
+            state_action = state_action.detach()
+        n,m = encoding.size()
+        # print("enc", encoding.size())
+        predict_next_map = self.predict_state_mapping(state_action)
+        # print("map", predict_next_map.size())
+        predict_reward_map = self.predict_reward_mapping(state_action)
+        # print("reward map", predict_reward_map.size())
+        predict_next = self.predict_state(
+            torch.multiply(encoding, predict_next_map)
+        )
+        # print("next", predict_next.size())
+        predict_reward = torch.bmm(encoding.view(n, 1, m), predict_reward_map.view(n, m, 1))
+        # print("reward", predict_reward.squeeze().size())
+        return predict_next, predict_reward
+
+    def forward_old(
+        self,
+        encoder,
+        inputs: List[torch.Tensor],
+        actions: AgentAction,
+        memories: Optional[torch.Tensor] = None,
+        sequence_length: int = 1,
+        no_grad_encoder: bool = True,
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+
+        if self.is_dist:
             cont_action = actions.continuous_tensor
             dist_actions = torch.cat(actions.discrete_list)
 
@@ -539,6 +604,34 @@ class DynamicModel(nn.Module):
                 inputs, None, memories, sequence_length
             )
             state_action = torch.cat((encoding, cont_action), dim=1)
+
+        if no_grad_encoder:
+            state_action = state_action.detach()
+        predict_next = self.predict_state(state_action)
+        predict_reward = self.predict_reward(state_action)
+        return predict_next, predict_reward
+    
+    def raw_forward(
+        self,
+        inputs: List[torch.Tensor],
+        actions: AgentAction,
+        no_grad_encoder: bool = True,
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+
+        encoded_self = torch.cat(inputs, dim=1)
+
+        if self.is_dist:
+            cont_action = actions.continuous_tensor
+            dist_actions = torch.cat(actions.discrete_list)
+
+            if self.num_actions > 1:
+                onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
+                state_action = torch.cat((encoded_self, onehot), dim=1)
+            else:
+                state_action = torch.cat((encoded_self, dist_actions.unsqueeze(1)), dim=1)
+        else:
+            cont_action = actions.continuous_tensor
+            state_action = torch.cat((encoded_self, cont_action), dim=1)
 
         if no_grad_encoder:
             state_action = state_action.detach()

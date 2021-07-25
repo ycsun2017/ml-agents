@@ -94,11 +94,11 @@ class DQNPolicy(Policy):
 
         # The dynamics model
         self.model = DynamicModel(
-            self.hyperparameters.feature_size, 
-            self.num_actions,
-            trainer_settings.network_settings.hidden_units,
-            self.hyperparameters.forward_layers, 
-            self.hyperparameters.onehot_action
+            enc_size=self.hyperparameters.feature_size, 
+            num_actions=self.num_actions,
+            h_size=trainer_settings.network_settings.hidden_units,
+            num_layers=self.hyperparameters.forward_layers, 
+            onehot_action=self.hyperparameters.onehot_action
         )
 
         # self.q_network = ValueNetwork(

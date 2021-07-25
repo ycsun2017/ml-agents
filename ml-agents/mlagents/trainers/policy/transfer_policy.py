@@ -50,9 +50,9 @@ class TransferPolicy(TorchPolicy):
             seed,
             behavior_spec,
             trainer_settings,
-            tanh_squash,
-            reparameterize,
-            condition_sigma_on_obs,
+            tanh_squash=tanh_squash,
+            reparameterize=reparameterize,
+            condition_sigma_on_obs=condition_sigma_on_obs,
         )
         self.global_step = (
             GlobalSteps()
@@ -78,14 +78,16 @@ class TransferPolicy(TorchPolicy):
         # )
 
         # The dynamics model
+        self.num_actions = sum(behavior_spec.action_spec.discrete_branches)
+        is_dist = (self.num_actions > 0)
+        print("is discrete?", is_dist)
         self.model = DynamicModel(
-            self.hyperparameters.feature_size, 
-            int(behavior_spec.action_spec.continuous_size),
-            trainer_settings.network_settings.hidden_units,
-            self.hyperparameters.forward_layers
+            enc_size=self.hyperparameters.feature_size,
+            num_actions=int(behavior_spec.action_spec.continuous_size),
+            h_size=trainer_settings.network_settings.hidden_units,
+            num_layers=self.hyperparameters.forward_layers,
+            is_dist=is_dist
         )
-        # print("----encoder----")
-        # print(self.encoder)
         print("----model----")
         print(self.model)
 

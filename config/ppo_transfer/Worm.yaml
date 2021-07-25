@@ -12,10 +12,10 @@ behaviors:
       learning_rate_schedule: linear
       transfer_target: false
       forward_layers: 1
-      feature_size: 512
-      detach_next: false
+      feature_size: 256
+      detach_next: true
       encode_actor: true
-      encode_critic: true
+      encode_critic: false
       norm_latent: true
       norm_reward: false
       predict_delta: false

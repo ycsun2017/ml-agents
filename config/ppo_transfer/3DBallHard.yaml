@@ -12,15 +12,16 @@ behaviors:
       learning_rate_schedule: linear
       transfer_target: false
       forward_layers: 1
-      feature_size: 16
+      feature_size: 10
       encode_actor: true
-      encode_critic: false
-      norm_latent: false
+      encode_critic: true
+      norm_latent: true
       norm_reward: true
-      predict_delta: false
+      predict_delta: true
+      model_raw: false
     network_settings:
       normalize: true
-      hidden_units: 128
+      hidden_units: 64
       num_layers: 2
       vis_encode_type: simple
     reward_signals:

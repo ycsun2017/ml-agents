@@ -14,8 +14,13 @@ behaviors:
       reward_signal_steps_per_update: 10.0
       transfer_target: false
       forward_layers: 1
-      feature_size: 16
-      encode_actor: true
+      feature_size: 10
+      encode_actor: false
+      encode_critic: true
+      norm_latent: true
+      norm_reward: true
+      predict_delta: true
+      model_raw: false
     network_settings:
       normalize: true
       hidden_units: 64

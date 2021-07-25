@@ -162,6 +162,7 @@ class TransferSettings:
     norm_latent: bool = False
     norm_reward: bool = True
     predict_delta: bool = False
+    model_raw: bool = False
 
 @attr.s(auto_attribs=True)
 class PPOSettings(HyperparamSettings):
@@ -241,6 +242,7 @@ class DQNSettings(HyperparamSettings):
     norm_reward: bool = True
     predict_delta: bool = False
     coeff: float = 1.0
+    model_raw: bool = False
 
 
     @reward_signal_steps_per_update.default

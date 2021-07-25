@@ -266,8 +266,18 @@ class DQNTrainer(RLTrainer):
                     sampled_minibatch[RewardSignalUtil.rewards_key(name)] = (
                         signal.evaluate(sampled_minibatch) * signal.strength
                     )
+                
+                sampled_minibatch2 = buffer.sample_mini_batch(
+                    self.hyperparameters.batch_size,
+                    sequence_length=self.policy.sequence_length,
+                )
+                # Get rewards for each reward
+                for name, signal in self.optimizer.reward_signals.items():
+                    sampled_minibatch2[RewardSignalUtil.rewards_key(name)] = (
+                        signal.evaluate(sampled_minibatch2) * signal.strength
+                    )
 
-                update_stats = self.optimizer.update(sampled_minibatch, n_sequences)
+                update_stats = self.optimizer.update(sampled_minibatch, sampled_minibatch2, n_sequences)
                 
                 
                 for stat_name, value in update_stats.items():
@@ -362,7 +372,7 @@ class DQNTrainer(RLTrainer):
             self.initialize_or_load(
                 path=self.hyperparameters.transfer_from, 
                 load_encoder=False, 
-                load_q_head=False
+                load_q_head=True
             )
         elif self.hyperparameters.model_only:
             self.initialize_or_load(
