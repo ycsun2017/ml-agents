@@ -6,7 +6,7 @@ from mlagents_envs.logging_util import get_logger
 from mlagents.trainers.optimizer.torch_optimizer import TorchOptimizer
 from mlagents.trainers.policy.torch_policy import TorchPolicy
 from mlagents.trainers.settings import NetworkSettings, ScheduleType
-from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork, ActorEncoder
+from mlagents.trainers.torch.networks import ValueNetwork, EncodedValueNetwork, LatentEncoder
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
 from mlagents.trainers.torch.utils import ModelUtils
@@ -147,15 +147,50 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         
         hyperparameters: SACTransferSettings = cast(SACTransferSettings, trainer_params.hyperparameters)
         self.hyperparameters = hyperparameters
+        torch.autograd.set_detect_anomaly(True)
 
         # Use the encoder in value networks
-        self._critic = EncodedValueNetwork(
-            # self.policy.encoder,
-            reward_signal_names,
-            policy.behavior_spec.observation_specs,
-            policy.network_settings,
-            feature_size = hyperparameters.feature_size
-        )
+        if self.hyperparameters.encode_critic:
+            self._critic = EncodedValueNetwork(
+                # self.policy.encoder,
+                reward_signal_names,
+                policy.behavior_spec.observation_specs,
+                policy.network_settings,
+                feature_size = hyperparameters.feature_size
+            )
+            self.target_network = EncodedValueNetwork(
+                # self.policy.encoder,
+                reward_signal_names,
+                policy.behavior_spec.observation_specs,
+                policy.network_settings,
+                feature_size = hyperparameters.feature_size
+            )
+        else:
+            self._critic = ValueNetwork(
+                reward_signal_names,
+                policy.behavior_spec.observation_specs,
+                policy.network_settings,
+            ) 
+            self.target_network = ValueNetwork(
+                reward_signal_names,
+                self.policy.behavior_spec.observation_specs,
+                policy.network_settings,
+            )
+        # if self.hyperparameters.encode_actor:
+        #     self.target_encoder = LatentEncoder(
+        #         self.policy.behavior_spec.observation_specs,
+        #         policy.network_settings,
+        #         0,
+        #         self.hyperparameters.feature_size,
+        #         self.hyperparameters.norm_latent
+        #     )
+        #     ModelUtils.soft_update(self.policy.actor.encoder, self.target_encoder, 1.0)
+        #     print("---actor encoder------")
+        #     for name, param in self.policy.actor.encoder.named_parameters():
+        #         print(name, param)
+        #     print("---target encoder-----")
+        #     for name, param in self.target_encoder.named_parameters():
+        #         print(name, param)
 
         self.tau = hyperparameters.tau
         self.init_entcoef = hyperparameters.init_entcoef
@@ -186,15 +221,8 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             self._action_spec,
             feature_size = hyperparameters.feature_size
         )
-        print(self.q_network)
+        # print(self.q_network)
 
-        self.target_network = EncodedValueNetwork(
-            # self.policy.encoder,
-            reward_signal_names,
-            policy.behavior_spec.observation_specs,
-            policy.network_settings,
-            feature_size = hyperparameters.feature_size
-        )
         print("---actor----")
         print(self.policy.actor)
         print("---critic----")
@@ -236,7 +264,7 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         value_params = list(self.q_network.parameters()) + list(
             self._critic.parameters()
         )
-        encoder_params = list(self._critic.encoder.parameters())
+        # encoder_params = list(self._critic.encoder.parameters())
 
         # for name, params in self._critic.named_parameters():
         #     print("critic params", name, params)
@@ -269,9 +297,14 @@ class TorchSACTransferOptimizer(TorchOptimizer):
 
         # if not self.hyperparameters.transfer_target:
         # source task learning, train the encoder and value/policy networks, and fit a model
-        self.policy_optimizer = torch.optim.Adam(
-            policy_params, lr=hyperparameters.learning_rate
-        )
+        if self.hyperparameters.auxiliary:
+            self.policy_optimizer = torch.optim.Adam(
+                policy_params+model_params, lr=hyperparameters.learning_rate
+            )
+        else:
+            self.policy_optimizer = torch.optim.Adam(
+                policy_params, lr=hyperparameters.learning_rate
+            )
         self.value_optimizer = torch.optim.Adam(
             value_params, lr=hyperparameters.learning_rate
         ) 
@@ -649,12 +682,20 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         self.q_network.q2_network.network_body.copy_normalization(
             self.policy.actor.network_body
         )
-        self._critic.encoder.network_body.copy_normalization(
-            self.policy.actor.network_body
-        )
-        self.target_network.encoder.network_body.copy_normalization(
-            self.policy.actor.network_body
-        )
+        if self.hyperparameters.encode_critic:
+            self._critic.encoder.network_body.copy_normalization(
+                self.policy.actor.network_body
+            )
+            self.target_network.encoder.network_body.copy_normalization(
+                self.policy.actor.network_body
+            )
+        else:
+            self._critic.network_body.copy_normalization(
+                self.policy.actor.network_body
+            )
+            self.target_network.network_body.copy_normalization(
+                self.policy.actor.network_body
+            )
 
         sampled_actions, log_probs, _, _, = self.policy.actor.get_action_and_stats(
             current_obs,
@@ -706,41 +747,48 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         )
         policy_loss = self.sac_policy_loss(log_probs, q1p_out, masks)
         entropy_loss = self.sac_entropy_loss(log_probs, masks)
-        # if self.total_steps % 20 == 0:
-        #     print("actions", actions[0][0])
-        #     print("value", value_estimates)
 
         total_value_loss = q1_loss + q2_loss
         if self.policy.shared_critic:
             policy_loss += value_loss
         else:
             total_value_loss += value_loss
+
+        actor_model_loss = 0
         
-        model_loss = self.sac_model_loss(
-            self.critic.encoder,
-            current_obs, 
-            next_obs, 
-            actions, 
-            rewards["extrinsic"], 
-            memories=value_memories,
-            sequence_length=self.policy.sequence_length,
-            detach_next=True
-        )
+        if self.hyperparameters.encode_critic:
+            critic_model_loss = self.sac_model_loss(
+                self._critic.encoder,
+                current_obs, 
+                next_obs, 
+                actions, 
+                rewards["extrinsic"], 
+                memories=value_memories,
+                sequence_length=self.policy.sequence_length,
+                detach_next=self.hyperparameters.detach_next
+            )
+        else:
+            critic_model_loss = 0
         if self.hyperparameters.encode_actor:
             actor_model_loss = self.sac_model_loss(
                 self.policy.actor.encoder,
+                # self.target_encoder,
                 current_obs, 
                 next_obs, 
                 actions, 
                 rewards["extrinsic"], 
                 memories=None,  # does not support memory for now
                 sequence_length=self.policy.sequence_length,
-                detach_next=True
+                detach_next=self.hyperparameters.detach_next
             )
-
+        else:
+            actor_model_loss = 0
+        
+        model_loss = critic_model_loss + actor_model_loss
+        
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
         
-        if not self.hyperparameters.transfer_target:
+        if not self.hyperparameters.transfer_target and not self.hyperparameters.auxiliary:
             ModelUtils.update_learning_rate(self.policy_optimizer, decay_lr)
             self.policy_optimizer.zero_grad()
             policy_loss.backward()
@@ -754,8 +802,6 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             decay_model_lr = self.decay_model_learning_rate.get_value(self.policy.get_current_step())
             ModelUtils.update_learning_rate(self.model_optimizer, decay_model_lr)
             self.model_optimizer.zero_grad()
-            if self.hyperparameters.encode_actor:
-                model_loss += actor_model_loss
             model_loss.backward()
             self.model_optimizer.step()
         
@@ -771,7 +817,10 @@ class TorchSACTransferOptimizer(TorchOptimizer):
 
             ModelUtils.update_learning_rate(self.value_optimizer, decay_lr)
             self.value_optimizer.zero_grad()
-            (total_value_loss + coeff * model_loss).backward()
+            if self.hyperparameters.encode_critic:
+                (total_value_loss + coeff * critic_model_loss).backward()
+            else:
+                total_value_loss.backward()
             self.value_optimizer.step()
 
         ModelUtils.update_learning_rate(self.entropy_optimizer, decay_lr)
@@ -779,10 +828,10 @@ class TorchSACTransferOptimizer(TorchOptimizer):
         entropy_loss.backward()
         self.entropy_optimizer.step()
 
-        
-
         # Update target network
         ModelUtils.soft_update(self._critic, self.target_network, self.tau)
+        # ModelUtils.soft_update(self.policy.actor.encoder, self.target_encoder, self.tau)
+
         update_stats = {
             "Losses/Policy Loss": policy_loss.item(),
             "Losses/Value Loss": value_loss.item(),

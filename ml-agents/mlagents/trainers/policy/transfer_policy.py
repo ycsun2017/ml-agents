@@ -32,6 +32,7 @@ class TransferPolicy(TorchPolicy):
         separate_critic: bool = True,
         condition_sigma_on_obs: bool = True,
         det_action: bool = False,
+        random_action: bool = False
     ):
         """
         Policy that uses a multilayer perceptron to map the observations to actions. Could
@@ -69,6 +70,7 @@ class TransferPolicy(TorchPolicy):
         )
 
         self.det_action = det_action
+        self.random_action = random_action
         # The encoder
         # self.encoder = LatentEncoder(
         #     behavior_spec.observation_specs, 
@@ -78,12 +80,16 @@ class TransferPolicy(TorchPolicy):
         # )
 
         # The dynamics model
-        self.num_actions = sum(behavior_spec.action_spec.discrete_branches)
-        is_dist = (self.num_actions > 0)
-        print("is discrete?", is_dist)
+        model_num_actions = sum(behavior_spec.action_spec.discrete_branches)
+        is_dist = (model_num_actions > 0)
+        if not is_dist:
+            model_num_actions = int(behavior_spec.action_spec.continuous_size)
+        print("is discrete?", is_dist, "num actions = ", model_num_actions)
+        self.action_size = model_num_actions
+        
         self.model = DynamicModel(
             enc_size=self.hyperparameters.feature_size,
-            num_actions=int(behavior_spec.action_spec.continuous_size),
+            num_actions=model_num_actions,
             h_size=trainer_settings.network_settings.hidden_units,
             num_layers=self.hyperparameters.forward_layers,
             is_dist=is_dist
@@ -162,9 +168,18 @@ class TransferPolicy(TorchPolicy):
         :param buffer: The buffer with the observations to add to the running estimate
         of the distribution.
         """
-
         if self.normalize:
             self.actor.update_normalization(buffer)
+    
+    def get_random_actions(self, obs):
+        continuous_action: Optional[torch.Tensor] = None
+        discrete_action: Optional[List[torch.Tensor]] = None
+        # This checks None because mypy complains otherwise
+        continuous_action = torch.rand(obs[0].size()[0], self.action_size) * 2 - 1
+        # print("random", continuous_action)
+        transform = torch.distributions.transforms.TanhTransform(cache_size=1)
+        continuous_action = transform(continuous_action)
+        return AgentAction(continuous_action, discrete_action)
 
     @timed
     def sample_actions(
@@ -181,7 +196,10 @@ class TransferPolicy(TorchPolicy):
         :param seq_len: Sequence length when using RNN.
         :return: Tuple of AgentAction, ActionLogProbs, entropies, and output memories.
         """
-        if self.det_action:
+        if self.hyperparameters.random_policy:
+            actions = self.get_random_actions(obs)
+            return actions
+        elif self.det_action:
             actions =  self.actor.get_action_and_stats(
                 obs, masks, memories, seq_len, add_noise=True
             )
@@ -224,7 +242,7 @@ class TransferPolicy(TorchPolicy):
         )
 
         run_out = {}
-        if self.det_action:
+        if self.det_action or self.hyperparameters.random_policy:
             with torch.no_grad():
                 action = self.sample_actions(
                     tensor_obs, masks=masks, memories=memories

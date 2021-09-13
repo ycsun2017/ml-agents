@@ -163,6 +163,9 @@ class TransferSettings:
     norm_reward: bool = True
     predict_delta: bool = False
     model_raw: bool = False
+    random_policy: bool = False
+    load_pretrain: bool = False
+    auxiliary: bool = False
 
 @attr.s(auto_attribs=True)
 class PPOSettings(HyperparamSettings):

@@ -312,12 +312,20 @@ class PPOTransferTrainer(RLTrainer):
         self.model_saver.initialize_or_load()
 
         if self.hyperparameters.transfer_target:
-            self.initialize_or_load(
-                path=self.hyperparameters.transfer_from, 
-                load_encoder=False, 
-                load_value_heads=False,
-                load_actor_heads=False
-            )
+            if self.hyperparameters.load_pretrain:
+                self.initialize_or_load(
+                    path=self.hyperparameters.transfer_from, 
+                    load_encoder=True, 
+                    load_value_heads=self.hyperparameters.encode_critic,
+                    load_actor_heads=self.hyperparameters.encode_actor
+                )
+            else:
+                self.initialize_or_load(
+                    path=self.hyperparameters.transfer_from, 
+                    load_encoder=False, 
+                    load_value_heads=False,
+                    load_actor_heads=False
+                )
 
         # Needed to resume loads properly
         self.step = policy.get_current_step()
@@ -353,7 +361,7 @@ class PPOTransferTrainer(RLTrainer):
     def initialize_or_load(
         self, 
         path=None,
-        load_encoder=True, 
+        load_encoder=False, 
         load_value_heads=True, 
         load_actor_heads=True,
         load_model=True
@@ -369,12 +377,19 @@ class PPOTransferTrainer(RLTrainer):
         print("loading model from", model_path)
         models = torch.load(os.path.join(model_path, "models.pt"))
 
-        # if load_encoder:
-        #     self.optimizer.critic.encoder.load_state_dict(models["encoder"])
+        if load_encoder:
+            if self.hyperparameters.encode_actor:
+                self.policy.actor.encoder.load_state_dict(models["actor_encoder"])
+                print("loaded actor encoder")
+            if self.hyperparameters.encode_critic:
+                self.optimizer.critic.encoder.load_state_dict(models["critic_encoder"])
+                print("loaded value encoder")
         if load_value_heads:
             self.optimizer.critic.value_heads.load_state_dict(models["value_heads"])
+            print("loaded value head")
         if load_actor_heads:
             self.policy.actor.action_model.load_state_dict(models["actor_heads"])
+            print("loaded actor head")
         if load_model:
             self.policy.model.load_state_dict(models["model"])
         

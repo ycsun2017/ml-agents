@@ -11,12 +11,14 @@ behaviors:
       num_epoch: 3
       learning_rate_schedule: linear
       transfer_target: true
-      transfer_from: "results/pushblock_ppo_f256/PushBlock"
+      transfer_from: "results/pushblock_ppo_f1000_actionlinear/PushBlock"
       detach_next: true
       forward_layers: 1
-      feature_size: 256
-      coeff: 10.0
+      feature_size: 1000
       encode_actor: true
+      norm_latent: true
+      norm_reward: true
+      coeff: 10.0
     network_settings:
       normalize: false
       hidden_units: 256

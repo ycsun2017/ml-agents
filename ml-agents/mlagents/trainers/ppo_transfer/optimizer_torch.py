@@ -255,7 +255,7 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
                 rewards["extrinsic"], 
                 memories=None,  # does not support memory for now
                 sequence_length=self.policy.sequence_length,
-                detach_next=True
+                detach_next=self.hyperparameters.detach_next
             )
         else:
             model_loss = 0
@@ -268,10 +268,31 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
                 rewards["extrinsic"], 
                 memories=None,  # does not support memory for now
                 sequence_length=self.policy.sequence_length,
-                detach_next=True
+                detach_next=self.hyperparameters.detach_next
             )
             model_loss += actor_model_loss
         return model_loss
+    
+    def update_pretrain(self, op_batch):
+        # Get decayed parameters
+        decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
+
+        model_loss = self.model_loss_batch(op_batch)
+
+        # Set optimizer learning rate
+        ModelUtils.update_learning_rate(self.optimizer, decay_lr)
+        self.optimizer.zero_grad()
+        model_loss.backward()
+        self.optimizer.step()
+
+        update_stats = {
+            # NOTE: abs() is not technically correct, but matches the behavior in TensorFlow.
+            # TODO: After PyTorch is default, change to something more correct.
+            "Losses/Model Loss": model_loss.item() if type(model_loss) is not int else model_loss,
+            "Policy/Learning Rate": decay_lr,
+        }
+
+        return update_stats
 
     @timed
     def update(self, batch: AgentBuffer, num_sequences: int, op_batch: AgentBuffer) -> Dict[str, float]:
@@ -281,6 +302,8 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
         :param num_sequences: Number of sequences to process.
         :return: Results of update.
         """
+        if self.hyperparameters.random_policy:
+            return self.update_pretrain(op_batch)
         # Get decayed parameters
         decay_lr = self.decay_learning_rate.get_value(self.policy.get_current_step())
         decay_model_lr = self.decay_model_learning_rate.get_value(self.policy.get_current_step())

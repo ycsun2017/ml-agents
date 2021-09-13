@@ -290,7 +290,13 @@ class EncodedValueNetwork(nn.Module, Critic):
             norm_latent
         )
         self.act_size = act_size
-        self.value_heads = ValueHeads(stream_names, feature_size+act_size, outputs_per_stream)
+        self.mid_layer = linear_layer(
+            feature_size, 
+            network_settings.hidden_units, 
+            kernel_init=Initialization.KaimingHeNormal,
+            kernel_gain=1.0
+        )
+        self.value_heads = ValueHeads(stream_names, network_settings.hidden_units, outputs_per_stream)
 
     def update_normalization(self, buffer: AgentBuffer) -> None:
         self.encoder.network_body.update_normalization(buffer)
@@ -329,6 +335,7 @@ class EncodedValueNetwork(nn.Module, Critic):
         if no_grad_encoder:
             encoding = encoding.detach()
         encoding = torch.cat([encoding, actions], dim=1)
+        encoding = self.mid_layer(encoding)
         output = self.value_heads(encoding)
         return output, memories
 
@@ -345,6 +352,7 @@ class EncodedValueNetwork(nn.Module, Critic):
         )
         if no_grad_encoder:
             encoding = encoding.detach()
+        encoding = self.mid_layer(encoding)
         output = self.value_heads(encoding)
         return output, memories
 
@@ -494,14 +502,14 @@ class DynamicModel(nn.Module):
         self.predict_state = create_mlp(
             self.enc_size, 
             self.enc_size, 
-            self.num_layers, 
+            1, 
             self.h_size
         )
 
         self.predict_reward = create_mlp(
             self.enc_size, 
             1, 
-            self.num_layers, 
+            1, 
             self.h_size
         )
 
@@ -600,9 +608,6 @@ class DynamicModel(nn.Module):
                 state_action = torch.cat((encoding, dist_actions.unsqueeze(1)), dim=1)
         else:
             cont_action = actions.continuous_tensor
-            encoding, _ = encoder(
-                inputs, None, memories, sequence_length
-            )
             state_action = torch.cat((encoding, cont_action), dim=1)
 
         if no_grad_encoder:
@@ -626,17 +631,25 @@ class DynamicModel(nn.Module):
 
             if self.num_actions > 1:
                 onehot = torch.nn.functional.one_hot(dist_actions, self.num_actions)
-                state_action = torch.cat((encoded_self, onehot), dim=1)
+                state_action = onehot.float()
             else:
-                state_action = torch.cat((encoded_self, dist_actions.unsqueeze(1)), dim=1)
+                state_action = dist_actions.unsqueeze(1)
         else:
-            cont_action = actions.continuous_tensor
-            state_action = torch.cat((encoded_self, cont_action), dim=1)
+            cont_action = actions.continuous_tensor 
+            state_action = cont_action
 
-        if no_grad_encoder:
-            state_action = state_action.detach()
-        predict_next = self.predict_state(state_action)
-        predict_reward = self.predict_reward(state_action)
+        n, m = encoded_self.size()
+        # print("enc", encoding.size())
+        predict_next_map = self.predict_state_mapping(state_action)
+        # print("map", predict_next_map.size())
+        predict_reward_map = self.predict_reward_mapping(state_action)
+        # print("reward map", predict_reward_map.size())
+        predict_next = self.predict_state(
+            torch.multiply(encoded_self, predict_next_map)
+        )
+        # print("next", predict_next.size())
+        predict_reward = torch.bmm(encoded_self.view(n, 1, m), predict_reward_map.view(n, m, 1))
+        # print("reward", predict_reward.squeeze().size())
         return predict_next, predict_reward
     
     def cont_forward(
@@ -809,7 +822,7 @@ class SimpleActor(nn.Module, Actor):
         masks: Optional[torch.Tensor] = None,
         memories: Optional[torch.Tensor] = None,
         sequence_length: int = 1,
-        add_noise: bool=False
+        add_noise: bool = False
     ) -> Tuple[AgentAction, ActionLogProbs, torch.Tensor, torch.Tensor]:
 
         encoding, memories = self.network_body(
@@ -965,10 +978,19 @@ class EncodedSimpleActor(nn.Module, Actor):
         self.memory_size_vector = torch.nn.Parameter(
             torch.Tensor([int(self.encoder.network_body.memory_size)]), requires_grad=False
         )
+
+        self.mid_layer = linear_layer(
+            self.encoding_size, 
+            network_settings.hidden_units, 
+            kernel_init=Initialization.KaimingHeNormal,
+            kernel_gain=1.0
+        )
+
         self.det_action = det_action
         if self.det_action:
             self.action_model = DetActionModel(
-                self.encoding_size,
+                # self.encoding_size,
+                network_settings.hidden_units,
                 action_spec,
                 conditional_sigma=conditional_sigma,
                 tanh_squash=tanh_squash,
@@ -976,7 +998,8 @@ class EncodedSimpleActor(nn.Module, Actor):
             )
         else:
             self.action_model = ActionModel(
-                self.encoding_size,
+                # self.encoding_size,
+                network_settings.hidden_units,
                 action_spec,
                 conditional_sigma=conditional_sigma,
                 tanh_squash=tanh_squash,
@@ -1004,6 +1027,7 @@ class EncodedSimpleActor(nn.Module, Actor):
         encoding, memories = self.encoder(
             inputs, memories=memories, sequence_length=sequence_length
         )
+        encoding = self.mid_layer(encoding)
         if self.det_action:
             action = self.action_model(encoding, masks, add_noise)
             # print("action", action)
@@ -1037,6 +1061,7 @@ class EncodedSimpleActor(nn.Module, Actor):
         encoding, actor_mem_outs = self.encoder(
             inputs, memories=memories, sequence_length=sequence_length
         )
+        encoding = self.mid_layer(encoding)
         log_probs, entropies = self.action_model.evaluate(encoding, masks, actions)
 
         return log_probs, entropies
@@ -1080,7 +1105,7 @@ class EncodedSimpleActor(nn.Module, Actor):
         encoding, memories_out = self.encoder(
             inputs, memories=memories, sequence_length=1
         )
-
+        encoding = self.mid_layer(encoding)
         (
             cont_action_out,
             disc_action_out,

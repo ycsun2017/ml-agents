@@ -9,8 +9,10 @@ behaviors:
       epsilon: 0.2
       lambd: 0.95
       num_epoch: 3
-      learning_rate_schedule: constant
-      transfer_target: false
+      learning_rate_schedule: linear
+      transfer_target: true
+      random_policy: true
+      transfer_from: "results/ball_ppo_f8_l2_raw/3DBall"
       detach_next: true
       forward_layers: 2
       feature_size: 8
@@ -19,9 +21,9 @@ behaviors:
       norm_latent: true
       norm_reward: true
       predict_delta: false
-      model_raw: false
+      coeff: 0.1
     network_settings:
-      normalize: false
+      normalize: true
       hidden_units: 64
       num_layers: 2
       vis_encode_type: simple

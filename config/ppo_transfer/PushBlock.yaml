@@ -11,8 +11,10 @@ behaviors:
       num_epoch: 3
       learning_rate_schedule: linear
       forward_layers: 1
-      feature_size: 256
+      feature_size: 1000
       encode_actor: true
+      norm_latent: true
+      norm_reward: true
     network_settings:
       normalize: false
       hidden_units: 256
@@ -26,5 +28,4 @@ behaviors:
     max_steps: 2000000
     time_horizon: 64
     summary_freq: 60000
-
     threaded: true

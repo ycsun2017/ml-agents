@@ -393,7 +393,8 @@ class SACTransferTrainer(RLTrainer):
         """
         model_path = self.artifact_path
         models = {
-            "encoder": self.optimizer.critic.encoder.state_dict(),
+            "critic_encoder": self.optimizer.critic.encoder.state_dict() if self.hyperparameters.encode_critic else None,
+            "actor_encoder": self.policy.actor.encoder.state_dict() if self.hyperparameters.encode_actor else None,
             "value_heads": self.optimizer.critic.value_heads.state_dict(),
             "actor_heads": self.policy.actor.action_model.state_dict(),
             "model": self.policy.model.state_dict()
