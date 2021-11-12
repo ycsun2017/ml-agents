@@ -17,9 +17,10 @@ behaviors:
       encode_actor: true
       encode_critic: false
       norm_latent: true
-      norm_reward: true
+      norm_reward: false
       predict_delta: false
       model_raw: false
+      auxiliary: true
     network_settings:
       normalize: false
       hidden_units: 64

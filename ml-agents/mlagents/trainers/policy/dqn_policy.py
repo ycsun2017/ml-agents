@@ -11,7 +11,7 @@ from mlagents_envs.base_env import DecisionSteps, BehaviorSpec
 from mlagents_envs.timers import timed
 
 from mlagents.trainers.settings import TrainerSettings, ScheduleType, DQNSettings
-from mlagents.trainers.torch.networks import SimpleActor, SharedActorCritic, GlobalSteps, LatentEncoder, EncodedQNetwork, DynamicModel
+from mlagents.trainers.torch.networks import ActionDynamicModel, GlobalSteps, LatentEncoder, EncodedQNetwork, DynamicModel
 from mlagents.trainers.torch.decoders import ValueHeads
 from mlagents.trainers.torch.utils import ModelUtils
 from mlagents.trainers.buffer import AgentBuffer
@@ -93,7 +93,7 @@ class DQNPolicy(Policy):
         )
 
         # The dynamics model
-        self.model = DynamicModel(
+        self.model = ActionDynamicModel(
             enc_size=self.hyperparameters.feature_size, 
             num_actions=self.num_actions,
             h_size=trainer_settings.network_settings.hidden_units,
@@ -194,7 +194,7 @@ class DQNPolicy(Policy):
 
         random_action = [torch.randint_like(dis_a, 0, self.num_actions) for dis_a in discrete_action]
         
-        if random.random() < decay_eps:
+        if random.random() < decay_eps or self.hyperparameters.model_only:
             discrete_action = random_action
 
         action = AgentAction(continuous_action, discrete_action)

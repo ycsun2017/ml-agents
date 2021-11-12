@@ -12,14 +12,14 @@ behaviors:
       learning_rate_schedule: constant
       model_lr_schedule: linear
       transfer_target: true
-      transfer_from: "results/ball_ppo_f8_nolinear/3DBall"
+      transfer_from: "results/ball_ppo_f8_auxiliary/3DBall"
       detach_next: true
       forward_layers: 2
       feature_size: 8
       encode_actor: true
       encode_critic: false
       norm_latent: true
-      norm_reward: true
+      norm_reward: false
       predict_delta: false
       coeff: 10
     network_settings:

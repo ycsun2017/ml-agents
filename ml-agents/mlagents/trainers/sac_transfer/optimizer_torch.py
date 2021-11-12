@@ -570,20 +570,26 @@ class TorchSACTransferOptimizer(TorchOptimizer):
             memories,
             sequence_length
         )
+        grad_encoder = self.hyperparameters.transfer_target or self.hyperparameters.auxiliary
         predict_next, predict_reward = self.policy.model(
             encoder,
             obs,
             actions,
             memories,
             sequence_length,
-            not self.hyperparameters.transfer_target
+            no_grad_encoder = not grad_encoder
         )
         
         loss_fn = torch.nn.MSELoss()
 
         if detach_next:
             encoded_next = encoded_next.detach()
-        model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
+        if self.hyperparameters.transition_only:
+            model_loss = loss_fn(encoded_next, predict_next)
+        elif self.hyperparameters.reward_only:
+            model_loss = loss_fn(reward, predict_reward.squeeze())
+        else:
+            model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
 
         return model_loss
 

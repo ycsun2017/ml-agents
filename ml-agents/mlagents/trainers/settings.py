@@ -148,6 +148,8 @@ class TransferSettings:
     load_encoder: bool = False
     load_action: bool = False
     coeff: float = 1.0
+    reward_only: bool = False
+    transition_only: bool = False
 
     # Network
     encode_actor: bool = True
@@ -236,6 +238,7 @@ class DQNSettings(HyperparamSettings):
     detach_next: bool = False
     model_only: bool = False
     value_only: bool = False
+    load_encoder: bool = False
 
     # Network
     forward_layers: int = 2
@@ -246,7 +249,7 @@ class DQNSettings(HyperparamSettings):
     predict_delta: bool = False
     coeff: float = 1.0
     model_raw: bool = False
-
+    auxiliary: bool = False
 
     @reward_signal_steps_per_update.default
     def _reward_signal_steps_per_update_default(self):

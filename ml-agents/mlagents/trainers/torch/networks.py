@@ -19,6 +19,7 @@ from mlagents.trainers.torch.attention import (
     ResidualSelfAttention,
     get_zero_entities_mask,
 )
+from numpy.core.numeric import indices
 
 
 ActivationFunction = Callable[[torch.Tensor], torch.Tensor]
@@ -451,11 +452,17 @@ class EncodedQNetwork(nn.Module):
         #     num_action_ins,
         # )
         # self.encoder = encoder
+        self.mid_layer = linear_layer(
+            feature_size, 
+            network_settings.hidden_units, 
+            kernel_init=Initialization.KaimingHeNormal,
+            kernel_gain=1.0
+        )
 
         # The Q network, our policy is based on the Q outputs
         self.q_head = ValueHeads(
             stream_names, 
-            feature_size, 
+            network_settings.hidden_units, 
             num_value_outs
         )
 
@@ -474,9 +481,55 @@ class EncodedQNetwork(nn.Module):
         )
         if no_grad_encoder:
             encoding = encoding.detach()
+        encoding = self.mid_layer(encoding)
         output = self.q_head(encoding)
         return output, memories
 
+class ActionDynamicModel(nn.Module):
+    '''Only for discrete action space'''
+    def __init__(
+        self,
+        enc_size: int,
+        num_actions: int,
+        h_size: int,
+        num_layers: int,
+        onehot_action: bool = True,
+        is_dist: bool = True
+    ):
+        super().__init__()
+
+        self.h_size = h_size
+        self.num_actions = num_actions
+        self.num_layers = num_layers
+        self.enc_size = enc_size
+        
+        self.transitions = create_mlp(self.enc_size, self.enc_size*self.num_actions, 1, self.h_size)
+        self.rewards = create_mlp(self.enc_size, self.num_actions, 1, self.h_size)
+    
+    def forward(
+        self,
+        encoder,
+        inputs: List[torch.Tensor],
+        actions: AgentAction,
+        memories: Optional[torch.Tensor] = None,
+        sequence_length: int = 1,
+        no_grad_encoder: bool = True,
+    ) -> Tuple[Dict[str, torch.Tensor], Dict[str, torch.Tensor]]:
+        cont_action = actions.continuous_tensor
+        dist_actions = torch.cat(actions.discrete_list).long()
+        encoding, _ = encoder(
+            inputs, cont_action, memories, sequence_length
+        )
+        predict_next = self.transitions(encoding)
+        predict_reward = self.rewards(encoding)
+        
+        ind_starts = dist_actions * self.enc_size
+        ind_ends = ind_starts + self.enc_size
+        indices = torch.stack([torch.arange(ind_starts[i], ind_ends[i]) for i in range(ind_starts.size()[0])])
+        predict_next = predict_next.gather(1, indices)
+        predict_reward = predict_reward.gather(1, dist_actions.view(-1,1))
+
+        return predict_next, predict_reward
 
 class DynamicModel(nn.Module):
     def __init__(

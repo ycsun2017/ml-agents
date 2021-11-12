@@ -91,12 +91,17 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             self.trainer_settings.max_steps,
         )
 
-        self.optimizer = torch.optim.Adam(
-            params, lr=self.trainer_settings.hyperparameters.learning_rate
-        )
-        self.model_optimizer = torch.optim.Adam(
-            model_params, lr=hyperparameters.model_learning_rate
-        ) 
+        if self.hyperparameters.auxiliary:
+            self.optimizer = torch.optim.Adam(
+                params+model_params, lr=self.trainer_settings.hyperparameters.learning_rate
+            )
+        else:
+            self.optimizer = torch.optim.Adam(
+                params, lr=self.trainer_settings.hyperparameters.learning_rate
+            )
+            self.model_optimizer = torch.optim.Adam(
+                model_params, lr=hyperparameters.model_learning_rate
+            ) 
 
         self.stats_name_to_update_name = {
             "Losses/Value Loss": "value_loss",
@@ -197,13 +202,14 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
             memories,
             sequence_length
         )
+        grad_encoder = self.hyperparameters.transfer_target or self.hyperparameters.auxiliary
         predict_next, predict_reward = self.policy.model(
             encoder,
             obs,
             actions,
             memories,
             sequence_length,
-            no_grad_encoder = not self.hyperparameters.transfer_target
+            no_grad_encoder = not grad_encoder
         )
         
         if detach_next:
@@ -372,7 +378,7 @@ class TorchPPOTransferOptimizer(TorchOptimizer):
         
         model_loss = self.model_loss_batch(op_batch)
 
-        if not self.hyperparameters.transfer_target:
+        if not self.hyperparameters.transfer_target and not self.hyperparameters.auxiliary:
             loss = (
                 policy_loss
                 + 0.5 * value_loss

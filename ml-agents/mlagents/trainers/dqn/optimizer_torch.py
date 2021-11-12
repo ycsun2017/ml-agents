@@ -7,7 +7,7 @@ from mlagents.trainers.optimizer.torch_optimizer import TorchOptimizer
 from mlagents.trainers.policy.torch_policy import TorchPolicy
 from mlagents.trainers.policy.dqn_policy import DQNPolicy
 from mlagents.trainers.settings import NetworkSettings
-from mlagents.trainers.torch.networks import ValueNetwork, EncodedQNetwork
+from mlagents.trainers.torch.networks import ValueNetwork, EncodedQNetwork, LatentEncoder
 from mlagents.trainers.torch.agent_action import AgentAction
 from mlagents.trainers.torch.action_log_probs import ActionLogProbs
 from mlagents.trainers.torch.utils import ModelUtils, MovingMeanStd
@@ -68,6 +68,13 @@ class TorchDQNOptimizer(TorchOptimizer):
         #     int(self._action_spec.continuous_size),
         #     max(sum(self._action_spec.discrete_branches), 1)
         # )
+        self.target_encoder = LatentEncoder(
+            self.policy.behavior_spec.observation_specs, 
+            policy_network_settings,
+            int(self.policy.behavior_spec.action_spec.continuous_size),
+            self.hyperparameters.feature_size,
+            self.hyperparameters.norm_latent
+        )
         self.target_network = EncodedQNetwork(
             # self.policy.encoder,
             self.stream_names,
@@ -79,6 +86,7 @@ class TorchDQNOptimizer(TorchOptimizer):
         print("target network\n", self.target_network)
 
         ModelUtils.soft_update(self.q_network, self.target_network, 1.0)
+        ModelUtils.soft_update(self.policy.encoder, self.target_encoder, 1.0)
 
         for name, param in self.q_network.named_parameters():
             print("q net param\n", name, param)
@@ -100,32 +108,50 @@ class TorchDQNOptimizer(TorchOptimizer):
             self.trainer_settings.max_steps,
         )
 
-        if not self.hyperparameters.transfer_target:
-            # source task learning, train the encoder and q networks, and fit a model
+        self.decay_coeff = ModelUtils.DecayedValue(
+            self.hyperparameters.model_lr_schedule,
+            self.hyperparameters.coeff,
+            0,
+            self.trainer_settings.max_steps,
+        )
+        encoder_params = list(self.policy.encoder.parameters())
+        q_params = list(self.q_network.parameters())
+        model_params = list(self.policy.model.parameters())
+
+        if self.hyperparameters.auxiliary:
             self.value_optimizer = torch.optim.Adam(
-                [{"params": self.policy.encoder.parameters()}, 
-                {"params": self.q_network.parameters()}], 
+                encoder_params+q_params+model_params, 
                 lr=self.hyperparameters.learning_rate
             )
+            self.model_optimizer = None
 
+        elif not self.hyperparameters.transfer_target:
+            # source task learning, train the encoder and q networks, and fit a model
+            self.value_optimizer = torch.optim.Adam(
+                encoder_params+q_params,
+                lr=self.hyperparameters.learning_rate
+            )
             self.model_optimizer = torch.optim.Adam(
-                self.policy.model.parameters(), 
+                model_params,
                 lr=self.hyperparameters.model_learning_rate
             )
         else:
             if self.hyperparameters.value_only:
+                # only fitting the value
                 self.value_optimizer = torch.optim.Adam(
-                    self.q_network.parameters(), 
+                    q_params, 
                     lr=self.hyperparameters.learning_rate
                 )
+                self.model_optimizer = None
             else:
                 self.value_optimizer = torch.optim.Adam(
-                    [{"params": self.policy.encoder.parameters()}, 
-                    {"params": self.q_network.parameters()}], 
+                    encoder_params+q_params, 
                     lr=self.hyperparameters.learning_rate
                 )
-
-            self.model_optimizer = None
+                self.model_optimizer = torch.optim.Adam(
+                    model_params,
+                    lr=self.hyperparameters.model_learning_rate
+                )
             # self.value_optimizer = torch.optim.Adam(
             #     self.q_network.parameters(), 
             #     lr=self.hyperparameters.learning_rate
@@ -157,6 +183,8 @@ class TorchDQNOptimizer(TorchOptimizer):
         sequence_length,
     ):
         loss_fn = torch.nn.MSELoss()
+        grad_encoder = self.hyperparameters.transfer_target or self.hyperparameters.auxiliary
+        encoder = self.policy.encoder if grad_encoder else self.target_encoder
         
         if self.hyperparameters.model_raw:
             predict_next, predict_reward = self.policy.model.raw_forward(
@@ -167,19 +195,20 @@ class TorchDQNOptimizer(TorchOptimizer):
             encoded_next = torch.cat(next_obs, dim=1)
             return loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
         
-        encoded_next, _ = self.policy.encoder(
+        encoded_next, _ = encoder(
             next_obs,
             None, 
             memories,
             sequence_length
         )
+        grad_encoder = self.hyperparameters.transfer_target or self.hyperparameters.auxiliary
         predict_next, predict_reward = self.policy.model(
-            self.policy.encoder,
+            encoder,
             obs,
             actions,
             memories=memories,
             sequence_length=sequence_length,
-            no_grad_encoder=not self.hyperparameters.transfer_target
+            no_grad_encoder=not grad_encoder
         )
 
         if self.hyperparameters.detach_next:
@@ -199,7 +228,11 @@ class TorchDQNOptimizer(TorchOptimizer):
             encoded_cur = encoded_cur.detach()
             model_loss = loss_fn(encoded_next-encoded_cur, predict_next) + loss_fn(reward, predict_reward.squeeze())
         else:
-            model_loss = loss_fn(encoded_next, predict_next) + loss_fn(reward, predict_reward.squeeze())
+            model_loss = loss_fn(encoded_next, predict_next) #+ loss_fn(reward, predict_reward.squeeze())
+            # print("dynamics loss", loss_fn(encoded_next, predict_next))
+            # print("predict", predict_next[:5])
+            # print("encoded", encoded_next[:5])
+            # print("reward loss", loss_fn(reward, predict_reward.squeeze())
         return model_loss
 
     def model_loss_batch(self, batch):
@@ -425,7 +458,7 @@ class TorchDQNOptimizer(TorchOptimizer):
 
 
 
-        if not self.hyperparameters.transfer_target:
+        if not self.hyperparameters.transfer_target and not self.hyperparameters.auxiliary:
             if not self.hyperparameters.model_only:
                 self.value_optimizer.zero_grad()
                 q_loss = self.dqn_q_loss(
@@ -451,20 +484,16 @@ class TorchDQNOptimizer(TorchOptimizer):
         
         else:
             # target task, train with model loss
+            coeff = self.decay_coeff.get_value(self.policy.get_current_step())
             self.value_optimizer.zero_grad()
-            q_loss = self.dqn_q_loss(
-                q_stream, target_values, dones, rewards, masks
-            )
+            if not self.hyperparameters.model_only:
+                q_loss = self.dqn_q_loss(
+                    q_stream, target_values, dones, rewards, masks
+                )
+            else:
+                q_loss = 0
             model_loss = self.model_loss_batch(model_batch)
-            # model_loss = self.model_loss(
-            #     current_obs, 
-            #     next_obs, 
-            #     actions, 
-            #     rewards["extrinsic"], 
-            #     memories=q_memories,
-            #     sequence_length=self.policy.sequence_length,
-            # )
-            (q_loss + self.hyperparameters.coeff * model_loss).backward()
+            (q_loss + coeff * model_loss).backward()
             self.value_optimizer.step()
 
             # decay_model_lr = self.decay_model_lr.get_value(self.policy.get_current_step())
@@ -492,6 +521,7 @@ class TorchDQNOptimizer(TorchOptimizer):
 
         # Update target network
         ModelUtils.soft_update(self.q_network, self.target_network, self.tau)
+        ModelUtils.soft_update(self.policy.encoder, self.target_encoder, self.tau)
         update_stats = {
             "Losses/Value Loss": q_loss.item() if not self.hyperparameters.model_only else 0.0,
             "Losses/Model Loss": model_loss.item(),

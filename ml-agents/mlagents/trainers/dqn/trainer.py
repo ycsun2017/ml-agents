@@ -371,14 +371,14 @@ class DQNTrainer(RLTrainer):
         elif self.hyperparameters.transfer_target:
             self.initialize_or_load(
                 path=self.hyperparameters.transfer_from, 
-                load_encoder=False, 
+                load_encoder=self.hyperparameters.load_encoder, 
                 load_q_head=True
             )
         elif self.hyperparameters.model_only:
             self.initialize_or_load(
                 path=self.hyperparameters.transfer_from, 
-                load_encoder=True, 
-                load_q_head=True,
+                load_encoder=False, 
+                load_q_head=False,
                 load_model=True
             )
 
